@@ -17,7 +17,7 @@ let gameStarted = 0;
 // Loader
 var mglModels = new mglModelsLoader();
 mglModels.loadModel('buoy', './models/buoy.glb');
-mglModels.loadModel('clown_fish', './models/clown_fish.glb');
+//mglModels.loadModel('clown_fish', './models/clown_fish.glb');
 
 // Spawn
 let gameSpawn = new mglGameSpawnClass(mglModels);
@@ -83,11 +83,12 @@ function gameStart(){
         gameSpawn.setSpawnModel(buoyModel.scene);
     }
 
+    /*
     const unitModel = mglModels.getModel('clown_fish');
     if(unitModel){
         unitModel.scene.scale.set(.1, .1, .1);
         gameSpawn.setUnitModel(unitModel.scene);
-    }
+    }*/
 
     gameSpawn.setUnitModel(cube);
 
