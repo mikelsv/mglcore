@@ -10,7 +10,7 @@ https://mikelsv.github.io/mglcore/demo/demo_water_voronoi.html - water texture
 https://mikelsv.github.io/mglcore/demo/console_logs.html - console demo
 
 ## Logic - index.html
-```
+```html
     <div mgl_package>
         <script src="../mglcore/mgl.package.js"></script>
         <script>
@@ -24,15 +24,15 @@ Also, `<div mgl_package>` will be replaced on plain text code for build and depl
 
 ## Sections - main module logic
 
-```
-[Import section]
+```javascript
+// [Import section]
 import * as THREE from 'three';
 
-[Render section]
+// [Render section]
 import {scene, camera, renderer, mglInitSections} from 'mglcore/mgl.sections.js';
 mglInitSections.renderSection({ alpha: true, shadow: false });
 
-[Load section]
+// [Load section]
 var mglModels = new mglModelsLoader();
 mglModels.setScreen(new mglLoadingScreen()); // Show loading screen
 
@@ -43,7 +43,7 @@ const mglAudio = new mglAudioLoader();
 // [Init section]
 await mglInitSections.initSection(mglModels);
 
-[Global section]
+// [Global section]
 let gameBuilder = new GameBuilder();
 let singleText2d = new mglSingleText2d();
 
@@ -54,7 +54,7 @@ function gameStart(){
     console.log("Start game!", gamer.projectName, gamer.projectVers[0]);
 }
 
-[Callback section]
+// [Callback section]
 function callback(data){...}
 
 // [Controls section]
@@ -77,6 +77,8 @@ function animate(time){
     const deltaTime = (time - lastTime) / 1000;
     lastTime = time;
 
+    let move = moveControl.getMove(SPEED * deltaTime);
+
     // Render
     renderer.render(scene, camera);
 }
@@ -85,22 +87,28 @@ function animate(time){
 animate(0);
 ```
 
-## /mglcore
-mgl.build.js - build functions for any platforms.
+## /mglcore - need to refactory and more structure logic.
+mgl.build.js - build functions for any game platforms.
+
+mgl.controls.js - mouse and keyboard controls classes.
+
+mgl.core.js - core helper classes. KiVec2, mglEasting, mglTweak, mglConsole.
 
 mgl.gamer.js - gamer data. Load, store, save game values.
 
-mgl.core.js - helper functions.
+mgl.geometry.js - geometry primitives.
 
-mgl.threejs.js - threejs classes.
+mgl.package.js - package variables for init html.
 
-mgl.controls.js - mouse and keyboard controls.
+mgl.screen.js - screen extension. Flash screen.
 
-mgl.screen.js - screen extension.
+mgl.sections.js - sections logic helper.
+
+mgl.stats.js - statiscs.
 
 mgl.texture.js - textures on glsl.
 
-mgl.stats.js - statiscs.
+mgl.threejs.js - threejs classes.
 
 ## /extern
 Local copy [threejs](https://github.com/mrdoob/three.js), lil-gui, cannon-es for make build.
