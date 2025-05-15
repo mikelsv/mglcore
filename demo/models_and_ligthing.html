@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<title>Base models and ligthing</title>
+		<style>
+            body {
+                margin: 0;
+                overflow: hidden;
+                background-color: #000;
+                touch-action: none;
+            }
+        </style>
+	</head>
+	<body>
+        <div mgl_package>
+            <script src="../mglcore/mgl.package.js"></script>
+            <script>
+                mglPackageInit(null);
+            </script>
+        </div>
+	</body>
+</html>
+
+<script type="module">
+// [Import section]
+import * as THREE from 'three';
+import {mglLoadingScreen, mglModelsLoader, mglAudioLoader, mglSingleItems, mglGameSpawnClass, mglLights} from 'mglcore/mgl.threejs.js';
+import {mglSingleText2d, mglTextControls, mglTextControls2d, mglCenterModel} from 'mglcore/mgl.threejs.js';
+import {mglStickControl, mglStickControl2d, mglStickControl3d, mglKeyboardControl, mglMoveControl, mglWindowControl} from 'mglcore/mgl.controls.js'
+import {mglGeometry} from 'mglcore/mgl.geometry.js';
+import {mglFlashScreen} from 'mglcore/mgl.screen.js'
+import {mglGlslTextures} from 'mglcore/mgl.texture.js';
+import {mglStats} from 'mglcore/mgl.stats.js';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import GUI from 'lil-gui';
+
+// [Render section]
+import {scene, camera, renderer, mglInitSections} from 'mglcore/mgl.sections.js';
+mglInitSections.renderSection({ alpha: true, shadow: true });
+
+// [Load section]
+var mglModels = new mglModelsLoader();
+mglModels.setScreen(new mglLoadingScreen());
+
+// [Init section]
+await mglInitSections.initSection(mglModels);
+
+// [Global section]
+let hero = {
+    position: new THREE.Vector3(0, 1, 1)
+};
+let models = [];
+let groundModel;
+let modelConfig, lightConfig;
+
+// Add OrbitControls to rotate the camera
+const controls = new OrbitControls(camera, renderer.domElement);
+//controls.enableDamping = true;
+
+// Gui
+const gui = new GUI();
+
+// Materials
+const materials = {
+    MeshBasicMaterial: { new: function(){ return new THREE.MeshBasicMaterial(); }},
+    MeshNormalMaterial: { new: function(){ return new THREE.MeshNormalMaterial(); }},
+    MeshLambertMaterial: { new: function(){ return new THREE.MeshLambertMaterial(); }},
+    MeshPhongMaterial: { new: function(){ return new THREE.MeshPhongMaterial(); }},
+    MeshPhysicalMaterial: {
+        new: function(){
+            return new THREE.MeshPhysicalMaterial({ color: 0x00ffff,
+                transmission: 0.5,
+                roughness: 0.1,
+                metalness: 0.0,
+                clearcoat: 0.9,
+                clearcoatRoughness: 0.1,
+                ior: 1.5,
+                thickness: 0.5,
+                envMapIntensity: 1, });
+        }
+    },
+    MeshStandardMaterial: {
+        new: function(){
+            let material = new THREE.MeshStandardMaterial({});
+         }
+    },
+    MeshToonMaterial: { new: function(){ return new THREE.MeshToonMaterial(); }},
+    ShaderMaterial: { new: function(){
+        let textures = new mglGlslTextures();
+        let material = textures.matWaterVoronoi();
+
+        material.update = function(deltaTime){
+            material.uniforms.iTime.value += deltaTime;
+        }
+
+        return material;
+    }}
+};
+
+const lights = {
+    ambientLight: {
+        item: new THREE.AmbientLight(0x606060) // Мягкий белый свет
+    },
+    directionalLight: {
+        item: new THREE.DirectionalLight(0xffffff, 1), // Направленный свет
+        update: function(){
+            this.item.castShadow = true;
+        }
+        // directionalLight.position.set(5, 5, 5).normalize();
+    },
+    hemisphereLight: {
+        item: new THREE.HemisphereLight(0xffffbb, 0x080820, 1)
+    },
+    pointLight: {
+        item: new THREE.PointLight(0xffffff, 1, 100) // Точечный свет
+        // pointLight.position.set(5, 5, 5);
+    },
+    spotLight: {
+        item: new THREE.SpotLight(0xffffff, 1) // Прожектор
+        // spotLight.position.set(5, 5, 5);
+        // spotLight.angle = Math.PI / 6; // Угол освещения
+    }
+};
+
+// [Stats sections]
+let stats;
+if(mglBuild.debug){
+    stats = new mglStats(renderer);
+    stats.showAllPanels();
+}
+
+// [Start section]
+mglInitSections.waitForReady(() => mglModels.isReady(), gameStart);
+
+// Start game
+function gameStart(){
+    mglBuild.log("Start game!", gamer.projectName, gamer.projectVers[0]);
+    mglBuild.startGame();
+
+    // Config
+    lightConfig = {
+        light: lights.ambientLight,
+        lightCurrent: undefined,
+        intensity: 1,
+        color: 0xffffff,
+        distance: 0,
+        decay: 2,
+        power: 10,
+        text: ""
+    };
+
+    modelConfig = {
+        height: 1,
+        color: 0xff0000,
+        groundColor: 0xffffff,
+        material: materials.MeshBasicMaterial,
+        transparent: true,
+        opacity: 1,
+        wireframe: false,
+        transmission: .3,
+        roughness: 1,
+        metalness: 0,
+        clearcoat: 0,
+        clearcoatRoughness: 0,
+        ior: 1,
+        thickness: 0,
+        envMapIntensity: 0,
+    };
+
+    // Camera
+    camera.position.y = 5;
+    camera.position.z = 5;
+
+    // Gui
+    const folderCamera = gui.addFolder('Camera');
+    folderCamera.add(camera, 'fov', 10, 100).onChange((value) => {
+        camera.fov = value;
+        camera.updateProjectionMatrix();
+    });
+
+    // Light
+    let lightModels = gui.addFolder('Light - WASD or arrow control');
+    lightModels.add(hero.position, 'x', -10, 10).listen();
+    lightModels.add(hero.position, 'y', -10, 10).listen();
+    lightModels.add(hero.position, 'z', -10, 10).listen();
+
+    lightModels.add(lightConfig, 'light', lights).onChange((value) => {
+        lightConfig.light = value;
+        updateLight();
+    });
+
+    lightModels.add(lightConfig, 'intensity', -1, 10).onChange((value) => {
+        lightConfig.intensity = value;
+        updateLight();
+    });
+
+    lightModels.addColor(lightConfig, 'color').onChange((value) => {
+        lightConfig.colorLight = value;
+        updateLight();
+    });
+
+    lightModels.add({ comment: '' }, 'comment').name('=== PointLight or SpotLight ===').disable();
+
+    lightModels.add(lightConfig, 'distance', 0, 20).name("distance").onChange((value) => {
+        lightConfig.distance = value;
+        updateLight();
+    });
+
+    lightModels.add(lightConfig, 'decay', 0, 20).name("decay").onChange((value) => {
+        lightConfig.decay = value;
+        updateLight();
+    });
+
+    lightModels.add(lightConfig, 'power', 0, 20).name("power").onChange((value) => {
+        lightConfig.power = value;
+        updateLight();
+    });
+
+    // Models
+    let folderModels = gui.addFolder('Models');
+    folderModels.add(modelConfig, 'height', -1, 10).onChange((value) => {
+        modelConfig.height = value;
+        updateModels();
+    });
+
+    folderModels.add(modelConfig, 'material', materials).onChange((value) => {
+        modelConfig.material = value;
+        gameReStart();
+    });
+
+    folderModels.addColor(modelConfig, 'color').onChange((value) => {
+        modelConfig.color = value;
+        updateModels();
+    });
+
+    folderModels.add(modelConfig, 'transparent').onChange((value) => {
+        modelConfig.transparent = value;
+        updateModels();
+    });
+
+    folderModels.add(modelConfig, 'opacity', 0, 1).onChange((value) => {
+        modelConfig.opacity = value;
+        updateModels();
+    });
+
+    folderModels.add(modelConfig, 'wireframe').onChange((value) => {
+        modelConfig.wireframe = value;
+        updateModels();
+    });
+
+    folderModels.add(modelConfig, 'transmission', 0.001, 1).onChange((value) => {
+        modelConfig.transmission = value;
+        updateModels();
+    });
+
+    folderModels.add(modelConfig, 'roughness', 0.001, 1).onChange((value) => {
+        modelConfig.roughness = value;
+        updateModels();
+    });
+
+    folderModels.add(modelConfig, 'metalness', 0.001, 1).onChange((value) => {
+        modelConfig.metalness = value;
+        updateModels();
+    });
+
+    folderModels.add(modelConfig, 'clearcoat', 0.001, 1).onChange((value) => {
+        modelConfig.clearcoat = value;
+        updateModels();
+    });
+
+    folderModels.add(modelConfig, 'clearcoatRoughness', 0.001, 10).onChange((value) => {
+        modelConfig.clearcoatRoughness = value;
+        updateModels();
+    });
+
+    folderModels.add(modelConfig, 'ior', 0.001, 10).onChange((value) => {
+        modelConfig.ior = value;
+        updateModels();
+    });
+
+    folderModels.add(modelConfig, 'thickness', 0.001, 10).onChange((value) => {
+        modelConfig.thickness = value;
+        updateModels();
+    });
+
+    folderModels.add(modelConfig, 'envMapIntensity', 0.001, 10).onChange((value) => {
+        modelConfig.envMapIntensity = value;
+        updateModels();
+    });
+
+    folderModels.addColor(modelConfig, 'groundColor').onChange((value) => {
+        modelConfig.groundColor = value;
+        updateModels();
+    });
+
+    // Models
+    gameReStart();
+
+    // Hide loading screen
+    mglModels.getScreen().hideScreen();
+}
+
+// ReStartGame
+function gameReStart(){
+    gameReset();
+
+    const material = modelConfig.material.new();
+
+    // Make base models
+    { // Cube
+        const geometry = new THREE.BoxGeometry();
+        //const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: false, opacity: 0.5 });
+        addModel(new THREE.Mesh(geometry, material));
+    }
+
+    { // Sphere
+        const geometry = new THREE.SphereGeometry(.5);
+        //const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: false, opacity: 0.5 });
+        addModel(new THREE.Mesh(geometry, material));
+    }
+
+    { // Dodecahedron
+        const geometry = new THREE.DodecahedronGeometry(.5, 0);
+        //const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: false, opacity: 0.5 });
+        addModel(new THREE.Mesh(geometry, material));
+    }
+
+    { // Diamond
+        let mgl = new mglGeometry();
+        let geometry = mgl.makeDiamond();
+
+        //const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: false, opacity: 0.5 });
+        addModel(new THREE.Mesh(geometry, material));
+    }
+
+    { // Diamond Body
+        let mgl = new mglGeometry();
+        let geometry = mgl.makeDiamondBody();
+
+        //const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: false, opacity: 0.5 });
+        addModel(new THREE.Mesh(geometry, material));
+    }
+
+    { // Ground
+        const geometry = new THREE.PlaneGeometry(10, 10);
+        const material = modelConfig.material.new(); //new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: false, opacity: 0.5 });
+        groundModel = new THREE.Mesh(geometry, material);
+        groundModel.rotation.x = - Math.PI / 2;
+        groundModel.castShadow = true;
+        groundModel.receiveShadow = true;
+
+        scene.add(groundModel);
+    }
+
+    updateModels();
+    updateLight();
+}
+
+// Reset
+function gameReset(){
+    for(let i = 0; i < models.length; i ++){
+        let model = models[i];
+        scene.remove(model);
+    }
+
+    if(groundModel)
+        scene.remove(groundModel);
+
+    models = [];
+}
+
+function addModel(model){
+    let posX = models.length < 3 ? models.length : 2 - models.length;
+    posX *= 2;
+
+    model.position.set(posX, modelConfig.height, 0);
+    model.castShadow = true;
+
+    scene.add(model);
+    models.push(model);
+}
+
+function updateModel(model, ground){
+    if(model.material.color && !ground)
+        model.material.color.setHex(modelConfig.color);
+
+    if(!ground)
+        model.position.y = modelConfig.height;
+
+    model.material.transparent = modelConfig.transparent;
+    model.material.opacity = modelConfig.opacity;
+    model.material.wireframe = modelConfig.wireframe;
+
+    if(model.material.transmission){
+        model.material.transmission = modelConfig.transmission;
+        model.material.roughness = modelConfig.roughness;
+        model.material.metalness = modelConfig.metalness;
+        model.material.clearcoat = modelConfig.clearcoat;
+        model.material.clearcoatRoughness = modelConfig.clearcoatRoughness;
+        model.material.ior = modelConfig.ior;
+        model.material.thickness = modelConfig.thickness;
+        model.material.envMapIntensity = modelConfig.envMapIntensity;
+    }
+}
+
+function updateModels(){
+    for(let i = 0; i < models.length; i ++){
+        updateModel(models[i]);
+    }
+
+    updateModel(groundModel, true);
+
+    if(groundModel.material.color)
+        groundModel.material.color.setHex(modelConfig.groundColor);
+}
+
+function updateLight(){
+    if(lightConfig.lightCurrent)
+        scene.remove(lightConfig.lightCurrent);
+
+    let light = lightConfig.lightCurrent = lightConfig.light.item;
+    light.color.setHex(lightConfig.color);
+    light.intensity = lightConfig.intensity;
+    light.distance = lightConfig.distance;
+    light.decay = lightConfig.decay;
+    light.power = lightConfig.power;
+
+    //if(lightConfig.lightCurrent.update)
+    //    lightConfig.lightCurrent.update();
+
+    light.castShadow = true;
+
+    // Shadows
+    if(light.shadow){
+        light.shadow.mapSize.width = 1024;
+        light.shadow.mapSize.height = 1024;
+        light.shadow.camera.near = 0.5;
+        light.shadow.camera.far = 20;
+        renderer.shadowMap.enabled = true;
+    } else
+        renderer.shadowMap.enabled = false;
+
+    scene.add(light);
+}
+
+// [Controls section]
+let moveControl = new mglMoveControl();
+moveControl.initKeyboard();
+
+// [Animate section]
+let lastTime = 0;
+
+function animate(time) {
+    requestAnimationFrame(animate);
+
+    // Stats
+    if(mglBuild.debug)
+        stats.beginAnimate();
+
+    // Calculate the time elapsed since the last frame
+    const deltaTime = (time - lastTime) / 1000;
+    lastTime = time;
+
+    // Move
+    let move = moveControl.getMoveFromCamera(camera, deltaTime);
+    hero.position.x += move.x;
+    hero.position.z += move.y;
+
+    // Light
+    if(lightConfig && lightConfig.lightCurrent){
+        lightConfig.lightCurrent.position.copy(hero.position);
+    }
+
+    // Models
+    if(groundModel && groundModel.material.update){
+        groundModel.material.update(deltaTime);
+        models[0].material.update(deltaTime);
+    }
+
+    // Camera
+    camera.lookAt(hero.position);
+
+    // Render
+    renderer.render(scene, camera);
+
+    // Stats
+    if(mglBuild.debug)
+        stats.endAnimate();
+}
+
+// Let's start the animation
+animate(0);
+
+// [Extern section]
+mglWindowControl.addResizeEvent(camera, renderer);
+
+if(!mglBuild.debug)
+    mglWindowControl.addDisableContextMenu();
+
+</script>

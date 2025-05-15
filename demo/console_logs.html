@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<title>Console logs</title>
+		<style>
+            body {
+                margin: 0;
+                overflow: hidden;
+                background-color: #000;
+                touch-action: none;
+            }
+        </style>
+	</head>
+	<body>
+        <div mgl_package>
+            <script src="../mglcore/mgl.package.js"></script>
+            <script>
+                mglPackageInit(null);
+            </script>
+        </div>
+	</body>
+</html>
+
+<script type="module">
+// [Import section]
+import * as THREE from 'three';
+import {mglLoadingScreen, mglModelsLoader, mglAudioLoader, mglSingleItems, mglLights} from 'mglcore/mgl.threejs.js';
+
+// [Render section]
+import {scene, camera, renderer, mglInitSections} from 'mglcore/mgl.sections.js';
+mglInitSections.renderSection({ alpha: true, shadow: false });
+camera.position.set(0, 1, 10);
+
+// [Load section]
+var mglModels = new mglModelsLoader();
+mglModels.setScreen(new mglLoadingScreen());
+
+// [Init section]
+await mglInitSections.initSection(mglModels);
+
+// [Global section]
+let cube;
+
+// [Start section]
+mglInitSections.waitForReady(() => mglModels.isReady(), gameStart);
+
+// Start game
+function gameStart(){
+    mglBuild.log("Start game!", gamer.projectName, gamer.projectVers[0]);
+    mglBuild.startGame();
+
+    // Show console
+    mglBuild.console.collapse(0);
+
+    // Test Log
+    mglBuild.log('Logger work!');
+    mglBuild.log('Time now:', new Date());
+    mglBuild.log('Object:', { a: 1, b: [2, 3, 4] });
+
+    mglBuild.log("Use console: mglBuild.log('Test log message')");
+
+    // Cube
+    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: false, opacity: 0.5 });
+    cube = new THREE.Mesh(geometry, material);
+    cube.position.y = 1;
+    scene.add(cube);
+
+    // Ground
+    let water = new THREE.Mesh(
+        new THREE.PlaneGeometry(1000, 1000),
+        new THREE.MeshBasicMaterial({ color: 0x1E90FF, transparent: false, opacity: .5, side: THREE.DoubleSide})
+    );
+    water.rotation.x = - Math.PI / 2;
+    scene.add(water);
+
+    // Hide loading screen
+    mglModels.getScreen().hideScreen();
+}
+
+// [Animate section]
+let lastTime = 0;
+
+function animate(time){
+    requestAnimationFrame(animate);
+
+    // Calculate the time elapsed since the last frame
+    const deltaTime = (time - lastTime) / 1000;
+    lastTime = time;
+
+    // Cube
+    if(cube){
+        cube.rotation.x += 0.01;
+        cube.rotation.y += 0.01;
+    }
+
+    // Camera
+    camera.lookAt(0, 0, 0);
+
+    // Render
+    renderer.render(scene, camera);
+}
+
+// Let's start the animation
+animate(0);
+
+/*
+// Log generator
+let counter = 0;
+setInterval(() => {
+    mglBuild.log(`Log #${++counter}`);
+    if (counter % 5 === 0) {
+        mglBuild.log('This message appears every 5 logs');
+    }
+}, 1000);
+*/
+
+</script>

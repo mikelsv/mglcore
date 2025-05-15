@@ -7,27 +7,93 @@ import {FontLoader} from 'three/addons/loaders/FontLoader.js';
 
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js'
 
-const MGL_DEBUG = 1;
-
 export class mglLoadingScreen{
     loadingText = "Loading:";
+
+    constructor(){
+        this.injectHtml();
+    }
+
+    injectHtml(){
+        // Create the main container
+        const loadingScreen = document.createElement('div');
+        loadingScreen.id = 'mglLoadingScreen';
+
+        // Create an element for the image
+        const loadingImage = document.createElement('div');
+        loadingImage.id = 'mglLoadingImage';
+
+        // Create an element for the percentage
+        const loadingPercentage = document.createElement('div');
+        loadingPercentage.id = 'mglLoadingPercentage';
+        loadingPercentage.textContent = '0%';
+
+        // Create an element for the file information
+        const loadingFiles = document.createElement('div');
+        loadingFiles.id = 'mglLoadingFiles';
+        loadingFiles.textContent = '...';
+
+        // Add elements to the container
+        loadingScreen.appendChild(loadingImage);
+        loadingScreen.appendChild(loadingPercentage);
+        loadingScreen.appendChild(loadingFiles);
+
+        // Add a container to body
+        document.body.appendChild(loadingScreen);
+
+        const style = document.createElement('style');
+        style.textContent = `
+            #mglLoadingScreen {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.8);
+                color: white;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                font-size: 24px;
+                z-index: 1000;
+                text-align: center;
+            }
+            #mglLoadingPercentage {
+                font-size: 48px;
+                margin: 20px 0;
+            }
+            #mglLoadingImage {
+                width: 100%;
+                height: 50%;
+                background-image: url('./images/cover.png');
+                background-size: contain;
+                background-position: center;
+                background-repeat: no-repeat;
+            }
+            #mglLoadingFiles {
+                margin-top: 10px;
+            }
+        `;
+        document.head.appendChild(style);
+    }
 
     setLoadingText(text){
         this.loadingText = text;
     }
 
     updateScreen(perc, file){
-        document.getElementById('loadingPercentage').innerText = this.loadingText + ` ${perc}%`;
-        document.getElementById('loadingFiles').innerText = file;
+        document.getElementById('mglLoadingPercentage').innerText = this.loadingText + ` ${perc}%`;
+        document.getElementById('mglLoadingFiles').innerText = file;
     }
 
     setError(error){
-        document.getElementById('loadingPercentage').innerText = this.loadingText + ` FAIL`;
-        document.getElementById('loadingFiles').innerText = error;
+        document.getElementById('mglLoadingPercentage').innerText = this.loadingText + ` FAIL`;
+        document.getElementById('mglLoadingFiles').innerText = error;
     }
 
     hideScreen() {
-        document.getElementById('loadingScreen').style.display = 'none'; // Hide loading screen
+        document.getElementById('mglLoadingScreen').style.display = 'none'; // Hide loading screen
     }
 };
 
@@ -40,12 +106,16 @@ const mglModelsState = Object.freeze({
     FAIL: 4
 });
 
-// Models loader (stl, gltf, glb, font)
+// Models loader (png, jpg, svg, stl, gltf, glb, json, ttf, mp3, wav)
 export class mglModelsLoader{
     state = mglModelsState.READY;
     load = [];
     models = [];
     error = undefined;
+
+    getScreen(){
+        return this.screen;
+    }
 
     setScreen(screen){
         this.screen = screen;
@@ -88,9 +158,6 @@ export class mglModelsLoader{
         const ext = this.getFileExtension(model.url);
         let loader;
 
-        //if(MGL_DEBUG)
-        //    console.log('mglModelsClass.loadModelNext(): ' + model.name + '(' + model.url + ')');
-
         // Loader
         if(ext == 'png' || ext == 'jpg')
             loader = new THREE.TextureLoader();
@@ -123,11 +190,8 @@ export class mglModelsLoader{
 
         // Load
         loader.load(model.url, function(object){
-            model.model = object; //gltf.scene;
+            model.model = object;
             loaderClass.models.push(model);
-
-            //if(MGL_DEBUG)
-            //    console.log("l", model);
 
             loaderClass.state = mglModelsState.READY;
 
@@ -167,7 +231,6 @@ export class mglAudioLoader{
         for(let i = 0; i < mglModelsLoader.models.length; i ++){
             let model = mglModelsLoader.models[i];
             const ext = mglModelsLoader.getFileExtension(model.url);
-            //console.log("SM", model, ext);
 
             if(ext == 'mp3' || ext == 'wav'){
                 let audio = {
@@ -551,9 +614,6 @@ export class mglGameSpawnClass{
                         );
 
                         unit.durationTime = 1 * 1000;
-
-                        if(MGL_DEBUG)
-                            console.log("Pickup!", unit);
                     }
                 }
 
@@ -597,9 +657,6 @@ export class mglGameSpawnClass{
 
                     spawn.units.push(unit);
                     scene.add(unit.mesh);
-
-                    if(MGL_DEBUG)
-                        console.log('Spawn Unit!', x, z, unit.mesh);
 
                     spawn.count ++;
                     spawn.workTime = time;

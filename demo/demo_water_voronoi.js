@@ -1,40 +1,34 @@
+// [Import section]
 import * as THREE from 'three';
 import {mglLoadingScreen, mglModelsLoader, mglAudioLoader, mglSingleItems, mglGameSpawnClass, mglLights} from 'mglcore/mgl.threejs.js';
-import {mglStickControl, mglStickControl2d, mglStickControl3d, mglKeyboardControl} from 'mglcore/mgl.controls.js'
+import {mglStickControl, mglStickControl2d, mglStickControl3d, mglKeyboardControl, mglMoveControl} from 'mglcore/mgl.controls.js'
 import {mglGlslTextures} from 'mglcore/mgl.texture.js';
+
+// [Render section]
+import {scene, camera, renderer, mglInitSections} from 'mglcore/mgl.sections.js';
+mglInitSections.renderSection({ alpha: true, shadow: false });
+camera.position.set(3, 15, 10);
+
+// [Load section]
+var mglModels = new mglModelsLoader();
+mglModels.setScreen(new mglLoadingScreen());
+
+// [Init section]
+await mglInitSections.initSection(mglModels);
+
+// [Global section]
 
 // Hero
 let hero;
 let water;
 
-// Variables
-let lastTime = 0;
-let gameStarted = 0;
-
-// Make scene
-const scene = new THREE.Scene();
-
-// Make camera
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.z = 5; // Set the initial position of the camera
-camera.go_y = 0;
-camera.position.set(3, 15, 10);
-
-// Make render
-//const renderer = new THREE.WebGLRenderer({ alpha: true });
-const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('threejs'), antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.alpha = true;
-document.body.appendChild(renderer.domElement);
-renderer.setClearColor(0x000000, 1);
+// [Start section]
+mglInitSections.waitForReady(() => mglModels.isReady(), gameStart);
 
 // Start game
 function gameStart(){
     console.log("Start game!", gamer.projectName, gamer.projectVers[0]);
-    mglBuild.start();
-
-    let loadingScreen = new mglLoadingScreen();
-    loadingScreen.hideScreen();
+    mglBuild.startGame();
 
     // Hero cube
     const geometry = new THREE.BoxGeometry();
@@ -57,49 +51,44 @@ function gameStart(){
     scene.add( new THREE.HemisphereLight( 0x8d7c7c, 0x494966, 3 ) );
     mglLights.addShadowedLight(scene, 1, 1, 1, 0xffffff, 3.5 );
     mglLights.addShadowedLight(scene, 0.5, 1, - 1, 0xffd500, 3 );
+
+    // Hide loading screen
+    mglModels.getScreen().hideScreen();
 }
 
-// Controls
+// [Controls section]
 let stickControl = new mglStickControl2d();
 stickControl.init(scene, true);
 
 let keyboardControl = new mglKeyboardControl();
 keyboardControl.init();
 
-// Go
-gameStart();
+let moveControl = new mglMoveControl();
+moveControl.init(stickControl, keyboardControl);
 
-// Animation function
-function animate(time) {
+// [Animate section]
+let lastTime = 0;
+
+function animate(time){
     requestAnimationFrame(animate);
 
     // Calculate the time elapsed since the last frame
     const deltaTime = (time - lastTime) / 1000;
     lastTime = time;
 
-    { // Move Section //
-        let move = keyboardControl.getMove();
-
-        // Mouse movement
-        if(!move.length())
-            move = new KiVec2(stickControl.moveX, stickControl.moveY);
-
-        // Limit maximum speed to 1
-        if(move.length() > 1)
-            move = move.normalize();
-
-        // Multiply by the player's speed
-        move = move.multiply(10 * deltaTime);
-
-        // Move the player in the direction of movement
+    // Move
+    if(hero){
+        let move = moveControl.getMoveFromCamera(camera, deltaTime * 10);
         hero.position.x += move.x;
         hero.position.z += move.y;
+
+        // Camera
+        camera.lookAt(hero.position.clone());
     }
 
-    camera.lookAt(hero.position.clone());
-
     // water
-    water.material.uniforms.iTime.value = time / 1000 / 5;
+    if(water)
+        water.material.uniforms.iTime.value = time / 1000 / 5;
 
     // Render
     renderer.render(scene, camera);
@@ -107,12 +96,3 @@ function animate(time) {
 
 // Let's start the animation
 animate(0);
-
-
-// Resize
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    console.log("RESIZE!", window.innerWidth, window.innerHeight);
-});

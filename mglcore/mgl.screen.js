@@ -25,8 +25,9 @@ export class mglFlashScreen {
         this.endTime = 0;
     }
 
-    initFlash(scene, colors = [[0.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 1.5]]){
+    initFlash(scene, camera, colors = [[0.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 1.5]]){
         this.scene = scene;
+        this.camera = camera;
 
         let g = new THREE.PlaneGeometry(1., 1.);
         let m = new THREE.ShaderMaterial({
@@ -70,8 +71,9 @@ export class mglFlashScreen {
         scene.add(this.flasher);
     }
 
-    initCircles(scene, color = 0xffffff){
+    initCircles(scene, camera, color = 0xffffff){
         this.scene = scene;
+        this.camera = camera;
 
         let g = new THREE.PlaneGeometry(1., 1.);
         let m = new THREE.ShaderMaterial({
@@ -170,6 +172,17 @@ void main(){
         console.log("redFlashBorder alert!");
     }
 
+    setValue(value){
+        if(value){
+            this.flasher.visible = true;
+            this.flasher.position.copy(this.camera.position.clone().add(this.camera.getWorldDirection(new THREE.Vector3())));
+            this.flasher.material.uniforms.opacity.value = value;
+            this.flasher.material.uniforms.iTime.value = value;
+        } else {
+            this.flasher.visible = false;
+        }
+    }
+
     stop(){
         this.state = 0;
         this.flasher.visible = false;
@@ -195,7 +208,7 @@ void main(){
         }
     }
 
-    update(camera, deltaTime){
+    update(deltaTime){
         if(!this.state)
             return ;
 
@@ -213,7 +226,7 @@ void main(){
         }
 
         //this.flasher.position.copy(camera.position.clone());
-        this.flasher.position.copy(camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3())));
+        this.flasher.position.copy(this.camera.position.clone().add(this.camera.getWorldDirection(new THREE.Vector3())));
         //this.flasher.lookAt(camera.position.clone());
         this.flasher.material.uniforms.opacity.value = this.getOpacity(time - this.startTime, this.duration);
         this.flasher.material.uniforms.iTime.value = time - this.startTime;

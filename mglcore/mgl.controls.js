@@ -318,6 +318,20 @@ export class mglMoveControl{
         this.keyboard = keyboard;
     }
 
+    initMouseKeyboard(){
+        this.mouse = new mglStickControl();
+        this.keyboard = new mglKeyboardControl();
+
+        this.mouse.init();
+        this.keyboard.init();
+    }
+
+    initKeyboard(){
+        this.mouse = { getMove(){ return new KiVec2(); }}; // Blank
+        this.keyboard = new mglKeyboardControl();
+        this.keyboard.init();
+    }
+
     getMove(speed = 1){
         let move = this.mouse.getMove();
 
@@ -332,5 +346,50 @@ export class mglMoveControl{
         move = move.multiply(speed);
 
         return move;
+    }
+
+    getMoveFromCamera(camera, speed = 1){
+        let move = this.getMove();
+
+        // Get the camera direction
+        const cameraDirection = new THREE.Vector3();
+        camera.getWorldDirection(cameraDirection);
+
+        // Remove the Y component so that the movement is on the plane
+        cameraDirection.y = 0;
+        cameraDirection.normalize();
+
+        // Get the motion vector
+        const right = new THREE.Vector3();
+        camera.getWorldDirection(right);
+        right.cross(new THREE.Vector3(0, 1, 0)); // Get the vector to the right
+
+        // Calculate the new position
+        const moveDirection = new THREE.Vector3();
+        moveDirection.addScaledVector(cameraDirection, -move.y); // Forward/backward movement
+        moveDirection.addScaledVector(right, move.x); // Move left/right
+
+        return new KiVec2(moveDirection.x, moveDirection.z).multiply(speed);
+    }
+
+};
+
+export class mglWindowControl{
+    static addResizeEvent(camera, renderer){
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            console.log("Window resized!", window.innerWidth, window.innerHeight);
+        });
+    }
+
+    static addDisableContextMenu(){
+        // Lock the context menu
+        const canvas = document.getElementById('threejs')
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            return false;
+        });
     }
 };

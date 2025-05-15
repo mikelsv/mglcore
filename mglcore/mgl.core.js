@@ -40,6 +40,10 @@ class KiVec2 {
         this.y = Math.max(min, Math.min(max, this.y));
     }
 
+    empty(){
+        return this.x == 0 && this.y == 0;
+    }
+
     // Method to reset values ​​to zero
     reset(){
         this.x = 0;
@@ -107,5 +111,303 @@ class mglTweak{
     stop(){
         this.endTime = this.startTime;
     }
+};
 
+class mglConsole {
+    constructor(options = {}) {
+        this.options = {
+            maxLines: 10,
+            title: 'Console>_',
+            collapsed: true,
+            init: true,
+            ...options
+        };
+
+        this.lines = [];
+        this.container = null;
+        this.header = null;
+        this.content = null;
+        this.isInitialized = false;
+        this.isCollapsed = options.collapsed;
+
+        if(options.init)
+            this.init();
+    }
+
+    init(){
+        if(this.isInitialized)
+            return;
+
+        this.isInitialized = true;
+
+        // Create a container
+        this.container = document.createElement('div');
+        this.container.className = 'mglConsoleContainer';
+
+        // Create a title
+        this.header = document.createElement('div');
+        this.header.className = 'mglConsoleHeader';
+        this.header.textContent = this.options.title;
+
+        // Create a content area
+        this.content = document.createElement('div');
+        this.content.className = 'mglConsoleContent';
+
+        // Add elements to the container
+        this.container.appendChild(this.header);
+        this.container.appendChild(this.content);
+
+        // Add the container to the body
+        document.body.appendChild(this.container);
+
+        // Apply styles
+        this.applyStyles();
+
+        // Add event handlers
+        this.header.addEventListener('click', () => this.toggle());
+
+        // Set the initial state
+        this.collapse(this.options.collapsed);
+    }
+
+    applyStyles() {
+        const style = document.createElement('style');
+        style.textContent = `
+            .mglConsoleContainer {
+                position: fixed;
+                bottom: 10px;
+                left: 10px;
+                background-color: rgba(0, 0, 0, 0.7);
+                color: white;
+                font-family: monospace;
+                font-size: 14px;
+                border-radius: 5px;
+                overflow: hidden;
+                z-index: 10000;
+                transition: width 0.3s ease, max-height 0.3s ease;
+            }
+
+            .mglConsoleHeader {
+                padding: 8px 12px;
+                background-color: rgba(0, 0, 0, 0.8);
+                cursor: pointer;
+                user-select: none;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .mglConsoleHeader:hover {
+                background-color: rgba(50, 50, 50, 0.8);
+            }
+
+            .mglConsoleContent {
+                max-height: 300px;
+                overflow-y: auto;
+                padding: 5px;
+                transition: max-height 0.3s ease;
+            }
+
+            .mglConsoleContent.collapsed {
+                width: 100px;
+                max-height: 0;
+                padding: 0;
+            }
+
+            .mglConsoleLine {
+
+                word-break: break-word;
+
+                border-color: #d6d8db;
+                margin-bottom: .1rem;
+                padding: .2rem 1.00rem;
+                border: 1px solid #b8bfb7ba;
+                border-radius: .25rem;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    log(...args) {
+        if (!this.isInitialized)
+            return ;
+
+        // Format arguments as console.log
+        const line = args.map(arg => {
+            if (typeof arg === 'object') {
+                try {
+                    return JSON.stringify(arg, null, 2);
+                } catch {
+                    return String(arg);
+                }
+            }
+            return String(arg);
+        }).join(' ');
+
+        // Add a new line
+        this.lines.push(line);
+
+        // Limit the number of lines
+        if (this.lines.length > this.options.maxLines){
+            this.lines.shift();
+        }
+
+        // Adding a new element
+        const logEntry = document.createElement('div');
+        logEntry.className = 'mglConsoleLine';
+        logEntry.textContent = line;
+        this.content.appendChild(logEntry);
+
+        // Delete old lines if the maximum number is exceeded
+        if (this.content.children.length > this.options.maxLines){
+            this.content.removeChild(this.content.children[0]);
+        }
+
+        // Scroll down to show the latest log
+        if(!this.isCollapsed)
+            this.content.scrollTop = this.content.scrollHeight;
+
+        // Original console
+        console.log(...args);
+    }
+
+    updateContent_DELETE(){
+        if (!this.isInitialized) return;
+
+        this.content.innerHTML = '';
+
+        this.lines.forEach(line => {
+            const lineElement = document.createElement('div');
+            lineElement.className = 'mglConsoleLine';
+            lineElement.textContent = line;
+            this.content.appendChild(lineElement);
+        });
+
+        this.content.scrollTop = this.content.scrollHeight;
+    }
+
+    toggle(){
+        this.collapse(!this.isCollapsed);
+        //this.collapse(!this.content.classList.contains('collapsed'));
+    }
+
+    collapse(value = 1){
+        if(!this.isInitialized)
+            return;
+
+        this.isCollapsed = value;
+
+        if(value)
+            this.content.classList.add('collapsed');
+        else
+            this.content.classList.remove('collapsed');
+    }
+
+    clear(){
+        this.lines = [];
+        this.updateContent();
+    }
+};
+
+// DEPRECATED AND DELETE
+class mglConsole2{
+    constructor(init = false) {
+        this.maxLines = 10;
+        this.isVisible = true;
+        this.isCollapse = false;
+        this.logContainer = null;
+        this.header = null;
+
+        if(init)
+            this.init();
+    }
+
+    init(){
+        // Make
+        const style = document.createElement('style');
+        style.textContent = `
+            #mglConsole {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                max-height: 200px;
+                overflow-y: auto;
+                background-color: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 3px;
+                border-radius: .25rem;
+                font-family: monospace;
+                transition: height 0.3s;
+            }
+            #mglConsoleHeader {
+                cursor: pointer;
+                background-color: rgba(255, 255, 255, 0.2);
+                padding: 5px;
+                margin-bottom: .2rem;
+                text-align: left;
+            }
+            .mglConsoleLine {
+                border-color: #d6d8db;
+                margin-bottom: .2rem;
+                padding: .2rem 1.00rem;
+                border: 1px solid #b8bfb7ba;
+                border-radius: .25rem;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Создание контейнера для логов
+        this.logContainer = document.createElement('div');
+        this.logContainer.id = 'mglConsole';
+
+        // Создание заголовка
+        this.header = document.createElement('div');
+        this.header.id = 'mglConsoleHeader';
+        this.header.textContent = 'Console>_';
+        this.header.onclick = () => this.toggleCollapse();
+
+        this.logContainer.appendChild(this.header);
+        document.body.appendChild(this.logContainer);
+
+        this.setCollapse(1);
+    }
+
+    log(...messages){
+        console.log(...messages);
+
+        if(!this.logContainer)
+            return;
+
+        const logEntry = document.createElement('div');
+        logEntry.className = 'mglConsoleLine';
+
+        logEntry.textContent = messages.join(' ');
+        this.logContainer.appendChild(logEntry);
+
+        // Delete old lines if the maximum number is exceeded
+        if (this.logContainer.children.length > this.maxLines + 1) {
+            this.logContainer.removeChild(this.logContainer.children[1]);
+        }
+
+        // Scroll down to show the latest log
+        if(this.isVisible)
+            this.logContainer.scrollTop = this.logContainer.scrollHeight;
+    }
+
+    setCollapse(value){
+        this.isCollapse = value;
+        this.logContainer.style.height = this.isCollapse ? '0' : 'auto';
+        this.header.style.paddingTop = this.isCollapse ? '20px' : '0';
+
+
+       // this.logContainer.style.bottom = this.isCollapse ? '10px' : '20px';
+    }
+
+    toggleCollapse(){
+        this.setCollapse(!this.isCollapse);
+    }
+
+    setVisible(value){
+        this.logContainer.style.visibility = value ? 'visible' : 'hidden';
+    }
 };

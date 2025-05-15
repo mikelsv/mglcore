@@ -1,0 +1,50 @@
+MyGL core - logic and structure
+0.1 - 14.05.2025 09:09 - Make fixed logic structure
+
+> index.html
+
+    <canvas id="threejs"></canvas>
+    <div mgl_package>
+        <script src="../mglcore/mgl.package.js"></script>
+        <script>
+            mglPackageInit();
+        </script>
+    </div>
+
+mgl.package.js mglPackageInit(); creates html injection for load project scripts and modules.
+Also, '<div mgl_package>' will be replaced on plain text code for build and deployment for extern resources.
+
+> main.js - Main module logic
+
+[Import section]
+import * as THREE from 'three';
+
+[Render section]
+Scene, camera, render.
+
+[Load section]
+var mglModels = new mglModelsLoader();
+mglModels.loadModel('font_roboto', './models/Roboto Medium_Regular.json');
+
+const mglAudio = new mglAudioLoader();
+
+[Init section]
+moduleInit();
+
+[Global section]
+let gameBuilder = new GameBuilder();
+let singleText2d = new mglSingleText2d();
+
+[Start section]
+gameStartTest();
+
+function gameStart(){...}
+
+[Callback section]
+function callback(data){...}
+
+[Controls section]
+mglStickControl, mglKeyboardControl, mglMoveControl
+
+[Animate section]
+function animate(time){...}
