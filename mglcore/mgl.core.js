@@ -113,6 +113,152 @@ class mglTweak{
     }
 };
 
+class mglHtmlPage{
+    constructor(){}
+
+    setTitle(title, description){
+        this.title = title;
+        this.description = description;
+        this.isCollapsed = false;
+
+        this.createHtmlStructure();
+        this.addStyles();
+        this.addEventListeners();
+    }
+
+    createHtmlStructure() {
+        // Создаем overlay (фон)
+        this.overlay = document.createElement('div');
+        this.overlay.className = 'mgl-html-page-overlay';
+
+        // Создаем основное окно
+        this.container = document.createElement('div');
+        this.container.className = 'mgl-html-page-container';
+
+        // Создаем заголовок
+        this.header = document.createElement('div');
+        this.header.className = 'mgl-html-page-header';
+        this.header.textContent = this.title;
+
+        // Создаем описание
+        this.content = document.createElement('div');
+        this.content.className = 'mgl-html-page-content';
+        this.content.innerHTML = this.description;
+
+        // Собираем структуру
+        this.container.appendChild(this.header);
+        this.container.appendChild(this.content);
+        this.overlay.appendChild(this.container);
+
+        // Добавляем в конец body
+        document.body.appendChild(this.overlay);
+    }
+
+    addStyles() {
+        const style = document.createElement('style');
+        style.textContent = `
+      .mgl-html-page-overlay {
+        position: fixed;
+        top: 50px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        #background-color: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: start;
+        z-index: 9999;
+      }
+
+      .mgl-html-page-container {
+        font-family: Arial, sans-serif;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        width: 80%;
+        max-width: 600px;
+        background-color: white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        overflow: hidden;
+        transition: all 0.3s ease;
+      }
+
+      .mgl-html-page-header {
+        background-color: #f5f5f5;
+        padding: 15px 20px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 18px;
+        border-bottom: 1px solid #ddd;
+        user-select: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .mgl-html-page-header:hover {
+        background-color: #e9e9e9;
+      }
+
+      .mgl-html-page-content {
+        padding: 20px;
+        background-color: white;
+      }
+
+      .mgl-html-page-container.collapsed {
+        transform: translateY(-50px);
+      }
+
+      .mgl-html-page-container.collapsed .mgl-html-page-content {
+        display: none;
+      }
+
+      .mgl-html-page-close {
+        font-size: 24px;
+        color: #888;
+        cursor: pointer;
+      }
+
+      .mgl-html-page-close:hover {
+        color: #333;
+      }
+    `;
+
+        document.head.appendChild(style);
+    }
+
+  addEventListeners() {
+    // Сворачивание/разворачивание по клику на заголовок
+    this.header.addEventListener('click', (e) => {
+      if (e.target.classList.contains('mgl-html-page-close')) return;
+
+      this.isCollapsed = !this.isCollapsed;
+      this.toggleCollapse();
+    });
+
+    // Закрытие по клику на overlay (вне окна)
+    this.overlay.addEventListener('click', (e) => {
+      if (e.target === this.overlay) {
+        this.close();
+      }
+    });
+  }
+
+  toggleCollapse() {
+    if (this.isCollapsed) {
+      this.container.classList.add('collapsed');
+    } else {
+      this.container.classList.remove('collapsed');
+    }
+  }
+
+  close() {
+    this.overlay.style.opacity = '0';
+    setTimeout(() => {
+      this.overlay.remove();
+    }, 300);
+  }
+}
+
 class mglConsole {
     constructor(options = {}) {
         this.options = {
@@ -215,9 +361,7 @@ class mglConsole {
             }
 
             .mglConsoleLine {
-
                 word-break: break-word;
-
                 border-color: #d6d8db;
                 margin-bottom: .1rem;
                 padding: .2rem 1.00rem;
@@ -228,13 +372,31 @@ class mglConsole {
         document.head.appendChild(style);
     }
 
-    log(...args) {
+    log(...args){
+        this.pushLog('log', ...args);
+
+        console.log(...args);
+    }
+
+    warn(...args){
+        this.pushLog('warning', ...args);
+
+        console.warn(...args);
+    }
+
+    error(...args){
+        this.pushLog('error', ...args);
+
+        console.error(...args);
+    }
+
+    pushLog(type, ...args){
         if (!this.isInitialized)
             return ;
 
         // Format arguments as console.log
         const line = args.map(arg => {
-            if (typeof arg === 'object') {
+            if (typeof arg === 'object'){
                 try {
                     return JSON.stringify(arg, null, 2);
                 } catch {
@@ -266,9 +428,6 @@ class mglConsole {
         // Scroll down to show the latest log
         if(!this.isCollapsed)
             this.content.scrollTop = this.content.scrollHeight;
-
-        // Original console
-        console.log(...args);
     }
 
     updateContent_DELETE(){

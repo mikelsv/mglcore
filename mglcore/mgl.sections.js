@@ -46,9 +46,17 @@ export class mglInitSections{
     }
 
     static async initSection(mglModels){
-        // Console
+        // Console && page
         mglBuild.console = new mglConsole({ init: mglBuild.debug });
         mglBuild.log = (...args) => mglBuild.console.log(...args);
+        mglBuild.warn = (...args) => mglBuild.console.warn(...args);
+        mglBuild.error = (...args) => mglBuild.console.error(...args);
+
+        // Page
+        mglBuild.page = new mglHtmlPage();
+
+        if(gamer.title && mglBuild.debug)
+            mglBuild.page.setTitle(gamer.title, gamer.descr);
 
         // Init build
         await mglBuildInit();
