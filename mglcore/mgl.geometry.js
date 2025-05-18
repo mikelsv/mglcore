@@ -610,7 +610,6 @@ export class mglGeometryGenerator{
             segments: 16,           // Количество сегментов по окружности
             position: [0, 0, 0],    // Позиция центра
             rotation: [0, 0, 0],    // Вращение
-            openEnded: false,       // Закрыть ли торцы
             ..._options
         };
 
@@ -637,6 +636,7 @@ export class mglGeometryGenerator{
 
                 // Нормаль (горизонтальная для боковой поверхности)
                 const nx = Math.cos(theta);
+                const ny = yPos;
                 const nz = Math.sin(theta);
 
                 // UV-координаты
@@ -647,7 +647,7 @@ export class mglGeometryGenerator{
                 const vertex = new THREE.Vector3(px, py, pz);
                 vertex.applyQuaternion(quaternion).add(center);
 
-                const normal = new THREE.Vector3(nx, 0, nz);
+                const normal = new THREE.Vector3(nx, ny, nz);
                 normal.applyQuaternion(quaternion).normalize();
 
                 //vertices.push(vertex.x, vertex.y, vertex.z);
@@ -669,8 +669,7 @@ export class mglGeometryGenerator{
             this.addIndex(b, c, d);
         }
 
-        // Генерация торцов (если не openEnded)
-        if (!options.openEnded) {
+        {
             const baseIndex = this.getVertLenNow() / 3;
 
             // Верхний торец
@@ -678,8 +677,10 @@ export class mglGeometryGenerator{
             //normals.push(0, 1, 0);
             //uvs.push(0.5, 0.5);
             const topVertex = new THREE.Vector3(0, halfLength, 0);
+            const topNormal = new THREE.Vector3(0, 1, 0);
             topVertex.applyQuaternion(quaternion).add(center);
-            this.addVerticeNorm(topVertex.x, topVertex.y, topVertex.z, 0, 1, 0);
+            topNormal.applyQuaternion(quaternion).normalize();
+            this.addVerticeNorm(topVertex.x, topVertex.y, topVertex.z, topNormal.x, topNormal.y, topNormal.z);
             this.addUv(0.5, 0.5);
 
             // Нижний торец
@@ -687,8 +688,10 @@ export class mglGeometryGenerator{
             //normals.push(0, -1, 0);
             //uvs.push(0.5, 0.5);
             const bottomVertex = new THREE.Vector3(0, -halfLength, 0);
+            const bottomNormal = new THREE.Vector3(0, -1, 0);
             bottomVertex.applyQuaternion(quaternion).add(center);
-            this.addVerticeNorm(bottomVertex.x, bottomVertex.y, bottomVertex.z, 0, -1, 0);
+            bottomNormal.applyQuaternion(quaternion).normalize();
+            this.addVerticeNorm(bottomVertex.x, bottomVertex.y, bottomVertex.z, bottomNormal.x, bottomNormal.y, bottomNormal.z);
             this.addUv(0.5, 0.5);
 
             // Вершины для торцов
@@ -699,20 +702,24 @@ export class mglGeometryGenerator{
 
                 // Верхний торец
                 const topVertex = new THREE.Vector3(px, halfLength, pz);
+                const topNormal = new THREE.Vector3(Math.cos(theta), halfLength, Math.sin(theta));
                 topVertex.applyQuaternion(quaternion).add(center);
+                topNormal.applyQuaternion(quaternion).normalize();
                 //vertices.push(topVertex.x, topVertex.y, topVertex.z);
                 //normals.push(0, 1, 0);
                 //uvs.push((Math.cos(theta) + 1) / 2, (Math.sin(theta) + 1) / 2);
-                this.addVerticeNorm(topVertex.x, topVertex.y, topVertex.z, 0, 1, 0);
+                this.addVerticeNorm(topVertex.x, topVertex.y, topVertex.z, topNormal.x, topNormal.y, topNormal.z);
                 this.addUv((Math.cos(theta) + 1) / 2, (Math.sin(theta) + 1) / 2);
 
                 // Нижний торец
                 const bottomVertex = new THREE.Vector3(px, -halfLength, pz);
+                const bottomNormal = new THREE.Vector3(Math.cos(theta), -halfLength, Math.sin(theta));
                 bottomVertex.applyQuaternion(quaternion).add(center);
+                bottomNormal.applyQuaternion(quaternion).normalize();
                 //vertices.push(bottomVertex.x, bottomVertex.y, bottomVertex.z);
                 //normals.push(0, -1, 0);
                 //uvs.push((Math.cos(theta) + 1) / 2, (Math.sin(theta) + 1) / 2);
-                this.addVerticeNorm(bottomVertex.x, bottomVertex.y, bottomVertex.z, 0, -1, 0);
+                this.addVerticeNorm(bottomVertex.x, bottomVertex.y, bottomVertex.z, bottomNormal.x, bottomNormal.y, bottomNormal.z);
                 this.addUv((Math.cos(theta) + 1) / 2, (Math.sin(theta) + 1) / 2);
             }
 

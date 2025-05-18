@@ -164,6 +164,9 @@ The task is to generate a model like in blender.
 
         makeMineSpikes(mmg, 1);
         makeMineSpikes(mmg, -1);
+
+        //makeMineSpikeOne(mmg, [-2, 0, 0], [0, 0, 0]);
+
     }
 
     makeMine(mmg);
@@ -233,6 +236,7 @@ function updateOneModel(model, type){
     }
 
     if(type == 1 && model.type == "Mesh"){
+        //&& model.material.color.equals(new THREE.Color(0xffffff))
         const item = new VertexNormalsHelper(model, 0.5, 0x00ff00, 1);
         modelConfig.showNormalsList.push(item);
         scene.add(item);
