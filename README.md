@@ -3,6 +3,8 @@
 ## /demo
 https://mikelsv.github.io/mglcore/demo/models_and_ligthing.html - models and lighthing demo
 
+https://mikelsv.github.io/mglcore/demo/models_generator.html - models generator (mglGeometryGenerator) demo
+
 https://mikelsv.github.io/mglcore/demo/demo_fish_game.html - threejs fish game demo
 
 https://mikelsv.github.io/mglcore/demo/demo_water_voronoi.html - water texture
@@ -103,6 +105,8 @@ animate(0);
 0.4 - 15.05.2025 07:16 - Adding mglConsole class
 
 0.5 - 17.05.2025 19:27 - Add piratepatch game. Add mglPages for title and description.
+
+0.6 - 18.05.2025 05:25 - Add mglGeometryGenerator and mglModelGenerator for generating models. Add new demo.
 
 ## /mglcore - need to refactory and more structure logic.
 mgl.build.js - build functions for any game platforms.

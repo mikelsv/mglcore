@@ -146,7 +146,18 @@ export class mglGeometryGenerator{
     uvs = [];
 
     verticeNow = 0;
-    //indicesId = 0;
+
+    getVertCount(){
+        return this.vertices.length;
+    }
+
+    getUvCount(){
+        return this.uvs.length
+    }
+
+    getIndexCount(){
+        return this.indices.length;
+    }
 
     getVertLenNow(){
         return this.vertices.length - this.verticeNow * 3;
@@ -666,8 +677,8 @@ export class mglGeometryGenerator{
             //vertices.push(center.x, center.y + halfLength, center.z);
             //normals.push(0, 1, 0);
             //uvs.push(0.5, 0.5);
-            const topVertex = new THREE.Vector3(center.x, center.y + halfLength, center.z);
-            //topVertex.applyQuaternion(quaternion);
+            const topVertex = new THREE.Vector3(0, halfLength, 0);
+            topVertex.applyQuaternion(quaternion).add(center);
             this.addVerticeNorm(topVertex.x, topVertex.y, topVertex.z, 0, 1, 0);
             this.addUv(0.5, 0.5);
 
@@ -675,7 +686,9 @@ export class mglGeometryGenerator{
             //vertices.push(center.x, center.y - halfLength, center.z);
             //normals.push(0, -1, 0);
             //uvs.push(0.5, 0.5);
-            this.addVerticeNorm(center.x, center.y - halfLength, center.z, 0, -1, 0);
+            const bottomVertex = new THREE.Vector3(0, -halfLength, 0);
+            bottomVertex.applyQuaternion(quaternion).add(center);
+            this.addVerticeNorm(bottomVertex.x, bottomVertex.y, bottomVertex.z, 0, -1, 0);
             this.addUv(0.5, 0.5);
 
             // Вершины для торцов
@@ -722,21 +735,33 @@ export class mglGeometryGenerator{
         }
     }
 
-    buildGeometry(){
+    buildGeometry(_options = {}){
+        let options = {
+            fract: 1,
+            ..._options
+        };
+
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(this.vertices, 3));
         geometry.setAttribute('normal', new THREE.Float32BufferAttribute(this.normals, 3));
         geometry.setAttribute('uv', new THREE.Float32BufferAttribute(this.uvs, 2));
-        geometry.setIndex(this.indices);
+
+        if(options.fract == 1)
+            geometry.setIndex(this.indices);
+        else {
+            const splice = this.indices.slice(0, Math.floor(Math.floor(this.getIndexCount() / 3) * options.fract) * 3);
+            const indeces = new Uint16Array(splice);
+            geometry.setIndex(new THREE.BufferAttribute(indeces, 1));
+        }
         //geometry.computeVertexNormals();
 
-        console.log(this.vertices);
-        console.log(this.indices);
         return geometry;
     }
 
     cleanAll(){
         this.vertices.length = 0;
+        this.normals.length = 0;
+        this.uvs.length = 0;
         this.indices.length = 0;
     }
 };
@@ -826,6 +851,60 @@ export class mglModelGenerator{
 
         return build;
     }
+};
 
+export class mglModelGeneratorExt extends mglModelGenerator{
 
+    makeMineModel(){
+        function makeMineSpikeOne(mmg, position, rotation){
+                let segments = 8;
+
+                mmg.useGroup("black");
+                mmg.addModelName("cylinder", { radius: 0.25, length: 0.05, segments: segments * 2, position: position, rotation: rotation });
+
+                mmg.useGroup("red");
+                mmg.addModelName("cylinder", { radius: 0.101, length: 0.25, segments: segments, position: position, rotation: rotation });
+
+                mmg.useGroup("white");
+                mmg.addModelName("cylinder", { radius: 0.1, length: 0.5, segments: segments, position: position, rotation: rotation });
+            }
+
+            function makeMineSpikeRing(mmg, mul, angleSpikes, angleMove){
+                let spikes = 4;
+                let radius = 1;
+
+                for(let i = 0; i < spikes; i ++){
+                    let angle = (i / spikes) * (2 * Math.PI) + angleMove; // Угол для каждого штырька
+                    let x = radius * Math.cos(angleSpikes) * Math.cos(angle); // X-координата
+                    let y = radius * Math.sin(angleSpikes) * mul; // Y-координата
+                    let z = radius * Math.sin(angle) * Math.cos(angleSpikes); // Высота штырька (выше сферы)
+
+                    makeMineSpikeOne(mmg, [x, y, z], [Math.asin(z / radius) * mul, 0, -Math.atan2(x, y)]);
+                }
+            }
+
+            function makeMineSpikes(mmg, mul){
+                let angle = Math.PI / 8;
+
+                makeMineSpikeOne(mmg, [0, mul, 0], [0, 0, 0]);
+                makeMineSpikeRing(mmg, mul, angle, 0);
+                makeMineSpikeRing(mmg, mul, angle * 2, Math.PI / 4);
+            }
+
+            function makeMine(mmg){
+                mmg.addGroup("red");
+                mmg.setMaterial(new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+                mmg.addModelName("sphere", {segments: 16});
+
+                mmg.addGroup("black").setMaterial(new THREE.MeshBasicMaterial({ color: 0x000000 }));
+                mmg.addModelName("ring", { radius: .95, tube: .1, rotation: [Math.PI / 2, 0, 0]});
+
+                mmg.addGroup("white").setMaterial(new THREE.MeshBasicMaterial({ color: 0xffffff }));
+
+                makeMineSpikes(mmg, 1);
+                makeMineSpikes(mmg, -1);
+            }
+
+        makeMine(this);
+    }
 };

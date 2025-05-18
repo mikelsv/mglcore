@@ -54,7 +54,7 @@ let hero = {
 };
 let models = [];
 let groundModel;
-let modelConfig, lightConfig;
+let modelConfig, lightConfig, generateConfig;
 
 // Add OrbitControls to rotate the camera
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -125,6 +125,31 @@ const lights = {
     }
 };
 
+// Model generator
+let mgg = new mglGeometryGenerator();
+let mggModel;
+let mggArrows = makeArrowsGroup();
+scene.add(mggArrows);
+
+const geometry = {
+    cube:{
+        call: mgg.makeCube.bind(mgg)
+    },
+    sphere:{
+        call: mgg.makeSphere.bind(mgg)
+    },
+    ring:{
+        call: mgg.makeRing.bind(mgg)
+    },
+    cylinder:{
+        call: mgg.makeCylinder.bind(mgg)
+    }
+};
+
+// Helpers
+let lightHelper = new THREE.PointLightHelper(lights.ambientLight.item, .5);
+scene.add(lightHelper);
+
 let modelHelper;
 
 // [Stats sections]
@@ -142,6 +167,12 @@ function gameStart(){
     mglBuild.log("Start game!", gamer.projectName, gamer.projectVers[0]);
     mglBuild.startGame();
 
+        mglBuild.page.setTitle("Models generator", `
+Use mglGeometryGenerator for combine any primitives in one geometry.
+<p>
+Use WASD or arrow keys to move the light source. And mouse to control the orbit.
+    `);
+
     // Config
     lightConfig = {
         light: lights.ambientLight,
@@ -154,11 +185,26 @@ function gameStart(){
         text: ""
     };
 
+    generateConfig = {
+        position: {x: 0, y: 1, z: 1},
+        rotation: {x: 0, y: 0, z: 0},
+        geometry: geometry.cube,
+        fract: 1,
+
+        vertices: 0,
+        indeces: 0,
+        uvs: 0,
+
+        add: function() { addGenerateModel(); },
+        update: function() { updateGenerateModel(); },
+        clean: function() { cleanGenerateModel(); },
+    };
+
     modelConfig = {
         height: 1,
         color: 0xff0000,
         groundColor: 0xffffff,
-        material: materials.MeshBasicMaterial,
+        material: materials.MeshPhysicalMaterial,
         transparent: true,
         opacity: 1,
         wireframe: false,
@@ -170,7 +216,7 @@ function gameStart(){
         ior: 1,
         thickness: 0,
         envMapIntensity: 0,
-        generate: function() { generateModel(); },
+
     };
 
     // Camera
@@ -222,9 +268,29 @@ function gameStart(){
         updateLight();
     });
 
-    // Models - Generate
-    let folderModels = gui.addFolder('Models - Generate');
-    folderModels.add(modelConfig, 'generate');
+    // Generator
+    let folderGenerate = gui.addFolder('mglGeometryGenerator');
+    folderGenerate.add(generateConfig.position, 'x', -10, 10);
+    folderGenerate.add(generateConfig.position, 'y', -10, 10);
+    folderGenerate.add(generateConfig.position, 'z', -10, 10);
+    folderGenerate.add(generateConfig, 'fract', 0, 1).onChange((value) => {
+        updateGenerateModel();
+    });
+
+    folderGenerate.add(generateConfig, 'geometry', geometry).onChange((value) => {
+        generateConfig.geometry = value;
+    });
+
+    folderGenerate.add(generateConfig, 'vertices').name('vertices/normals').disable().listen();
+    folderGenerate.add(generateConfig, 'uvs').disable().listen();
+    folderGenerate.add(generateConfig, 'indeces').disable().listen();
+
+    folderGenerate.add(generateConfig, 'add');
+    folderGenerate.add(generateConfig, 'update');
+    folderGenerate.add(generateConfig, 'clean');
+
+    // Models
+    let folderModels = gui.addFolder('Models');
 
     folderModels.add(modelConfig, 'height', -1, 10).onChange((value) => {
         modelConfig.height = value;
@@ -233,7 +299,7 @@ function gameStart(){
 
     folderModels.add(modelConfig, 'material', materials).onChange((value) => {
         modelConfig.material = value;
-        gameReStart();
+        updateModelsMaterial();
     });
 
     folderModels.addColor(modelConfig, 'color').onChange((value) => {
@@ -310,7 +376,7 @@ function gameStart(){
 
 // ReStartGame
 function gameReStart(){
-    gameReset();
+    //gameReset();
 
     const material = modelConfig.material.new();
 
@@ -349,141 +415,6 @@ function gameReStart(){
         addModel(new THREE.Mesh(geometry, material));
     }
 
-    { // Generate
-        /*
-        const mgg = new mglGeometryGenerator();
-        //mgg.makeCube2(1, [-2, 0, 0]);
-        //mgg.makeCube2(1, [2, 0, 0]);
-
-        //mgg.makeSphere(.5, [-2, 0, 0], 8);
-        //mgg.makeRing();
-        //mgg.makeSphere();
-        mgg.makeCylinder();
-
-        //const material = new mglGlslTextures().matFourColors();
-        const material = new mglGlslTextures().matChessSquares({x:1,y:1}, 10);
-
-        const geometry = mgg.buildGeometry();
-
-
-        const mesh = new THREE.Mesh(geometry, material);
-
-        modelHelper = new VertexNormalsHelper(mesh, 0.5, 0x00ff00);
-        scene.add(modelHelper);*/
-
-        function makeMineSpikeOne(mmg, position, rotation){
-            let segments = 8;
-
-            mmg.useGroup("black");
-            mmg.addModelName("cylinder", { radius: 0.25, length: 0.05, segments: segments * 2, position: position, rotation: rotation });
-
-            mmg.useGroup("red");
-            mmg.addModelName("cylinder", { radius: 0.101, length: 0.25, segments: segments, position: position, rotation: rotation });
-
-            mmg.useGroup("white");
-            mmg.addModelName("cylinder", { radius: 0.1, length: 0.5, segments: segments, position: position, rotation: rotation });
-        }
-
-        function makeMineSpikeRing(mmg, mul, angleSpikes, angleMove){
-            let spikes = 4;
-            let radius = 1;
-
-            for(let i = 0; i < spikes; i ++){
-                let angle = (i / spikes) * (2 * Math.PI) + angleMove; // Угол для каждого штырька
-                let x = radius * Math.cos(angleSpikes) * Math.cos(angle); // X-координата
-                let y = radius * Math.sin(angleSpikes) * mul; // Y-координата
-                let z = radius * Math.sin(angle) * Math.cos(angleSpikes); // Высота штырька (выше сферы)
-
-                makeMineSpikeOne(mmg, [x, y, z], [Math.asin(z / radius) * mul, 0, -Math.atan2(x, y)]);
-            }
-        }
-
-        function calculateSpikeRotation(x, y, z) {
-    // 1. Направляющий вектор к центру (0,0,0)
-    const direction = new THREE.Vector3(-x, -y, -z).normalize();
-
-    // 2. Вычисляем углы поворота через арктангенсы
-    const rotationX = Math.atan2(direction.z, direction.y);
-    const rotationY = Math.atan2(direction.x, direction.z);
-    const rotationZ = Math.atan2(direction.y, direction.x);
-
-    // 3. Корректируем углы для Three.js (Y-up система)
-    const adjustedRotation = new THREE.Vector3(
-        rotationX - Math.PI/2, // X-вращение (наклон вниз/вверх)
-        rotationY,             // Y-вращение (поворот вокруг оси Y)
-        0                      // Z-вращение обычно не нужно
-    );
-
-    return adjustedRotation;
-}
-
-        function makeMineSpikes(mmg, mul){
-            let angle = Math.PI / 8;
-
-            makeMineSpikeOne(mmg, [0, mul, 0], [0, 0, 0]);
-            makeMineSpikeRing(mmg, mul, angle, 0);
-            makeMineSpikeRing(mmg, mul, angle * 2, Math.PI / 4);
-        }
-
-        function makeMine(mmg){
-            mmg.addGroup("red");
-            mmg.setMaterial(new THREE.MeshBasicMaterial({ color: 0xff0000 }));
-            mmg.addModelName("sphere", {segments: 16});
-
-            mmg.addGroup("black").setMaterial(new THREE.MeshBasicMaterial({ color: 0x000000 }));
-            mmg.addModelName("ring", { radius: .95, tube: .1, rotation: [Math.PI / 2, 0, 0]});
-
-            mmg.addGroup("white").setMaterial(new THREE.MeshBasicMaterial({ color: 0xffffff }));
-
-            makeMineSpikes(mmg, 1);
-            makeMineSpikes(mmg, -1);
-        }
-
-        const mmg = new mglModelGenerator();
-        makeMine(mmg);
-
-
-        let spikes = 4;
-        let radius = 2;
-        let mul = 1;
-        let angleSpikes = Math.PI / 8;
-
-        for(let i = 0; i < spikes; i ++){
-            let angle = (i / spikes) * (2 * Math.PI); // Угол для каждого штырька
-            let x = radius * Math.cos(angleSpikes) * Math.cos(angle); // X-координата
-            let y = radius * Math.sin(angleSpikes) * mul; // Y-координата
-            let z = radius * Math.sin(angle) * Math.cos(angleSpikes); // Высота штырька (выше сферы)
-
-            //makeMineSpikeOne(mmg, [x, y, z], calculateSpikeRotation(x, y, z));
-            //mmg.addModelName("cylinder", { radius: 0.1, position: [x, y, z], rotation: [Math.asin(z / radius), 0, -Math.atan2(x, y)] });
-
-        }
-
-
-        //mmg.addModelName("cylinder", { position: [0, 3, 0], rotation: [3.14/2, 0, 3.14/2] });
-
-        //mmg.addModelName("cube");
-
-        //mmg.addModelCube(1, [-2, 0, 0]);
-        //mmg.addModelCube(1, [2, 0, 0]);
-        //mmg.addModelCube(1, [3, 0, 0]);
-        //mmg.addModelSphere(1, [2, 1, 0]);
-        //mmg.addModelSphere(1, [2, 0, 0]);
-
-        const mesh = mmg.buildModel();
-        mesh.lockcolor = true;
-       /* */
-
-
-        //modelHelper = new VertexNormalsHelper(mesh.children[0], 0.5, 0x00ff00);
-        //scene.add(modelHelper);
-
-        mesh.position.y = 1;
-        mesh.position.z = 2;
-        scene.add(mesh);
-        models.push(mesh);
-    }
-
     { // Ground
         const geometry = new THREE.PlaneGeometry(10, 10);
         const material = modelConfig.material.new(); //new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: false, opacity: 0.5 });
@@ -499,17 +430,34 @@ function gameReStart(){
     updateLight();
 }
 
-// Reset
-function gameReset(){
-    for(let i = 0; i < models.length; i ++){
-        let model = models[i];
-        scene.remove(model);
-    }
+function addGenerateModel(){
+    generateConfig.geometry.call({ position: [generateConfig.position.x, generateConfig.position.y, generateConfig.position.z] });
+    updateGenerateModel();
+}
 
-    if(groundModel)
-        scene.remove(groundModel);
+function updateGenerateModel(){
+    if(mggModel)
+        scene.remove(mggModel);
 
-    models = [];
+    const geomerty = mgg.buildGeometry({fract: generateConfig.fract});
+    const material = models[0].material;
+    mggModel = new THREE.Mesh(geomerty, material);
+
+    generateConfig.vertices = mgg.getVertCount();
+    generateConfig.uvs = mgg.getUvCount();
+    generateConfig.indeces = mgg.getIndexCount();
+
+    scene.add(mggModel);
+    models.push(mggModel);
+}
+
+function cleanGenerateModel(){
+    mgg.cleanAll();
+
+    if(mggModel)
+        scene.remove(mggModel);
+
+    mggModel = undefined;
 }
 
 function addModel(model){
@@ -566,6 +514,24 @@ function updateModels(){
         groundModel.material.color.setHex(modelConfig.groundColor);
 }
 
+function updateModelsMaterial(){
+    const material = modelConfig.material.new();
+
+    // Models
+    if(material.color)
+        material.color.setHex(modelConfig.color);
+
+    for(let model of models){
+        model.material = material;
+    }
+
+    // Ground
+    groundModel.material = modelConfig.material.new();
+
+    if(groundModel.material.color)
+        groundModel.material.color.setHex(modelConfig.groundColor);
+}
+
 function updateLight(){
     if(lightConfig.lightCurrent)
         scene.remove(lightConfig.lightCurrent);
@@ -576,6 +542,10 @@ function updateLight(){
     light.distance = lightConfig.distance;
     light.decay = lightConfig.decay;
     light.power = lightConfig.power;
+
+    // Helper
+    lightHelper.light = light;
+    lightHelper.matrix = lightHelper.light.matrixWorld;
 
     //if(lightConfig.lightCurrent.update)
     //    lightConfig.lightCurrent.update();
@@ -593,6 +563,34 @@ function updateLight(){
         renderer.shadowMap.enabled = false;
 
     scene.add(light);
+}
+
+function makeArrowsGroup(){
+    const group = new THREE.Group();
+
+    // Common parameters
+    const origin = new THREE.Vector3(0, 0, 0);
+    const arrowLength = 3;
+
+    // 1. Arrow on the X axis (red)
+    const dirX = new THREE.Vector3(1, 0, 0); // Direction to the center
+    const startX = new THREE.Vector3(-3, 0, 0); // Start of the arrow
+    const arrowX = new THREE.ArrowHelper(dirX, startX, arrowLength, 0xff0000);
+    group.add(arrowX);
+
+    // 2. Arrow on the Y axis (green)
+    const dirY = new THREE.Vector3(0, -1, 0);
+    const startY = new THREE.Vector3(0, 3, 0);
+    const arrowY = new THREE.ArrowHelper(dirY, startY, arrowLength, 0x00ff00);
+    group.add(arrowY);
+
+    // 3. Arrow along the Z axis (blue)
+    const dirZ = new THREE.Vector3(0, 0, -1);
+    const startZ = new THREE.Vector3(0, 0, 3);
+    const arrowZ = new THREE.ArrowHelper(dirZ, startZ, arrowLength, 0x0000ff);
+    group.add(arrowZ);
+
+    return group;
 }
 
 // [Controls section]
@@ -631,6 +629,10 @@ function animate(time) {
 
     if(modelHelper)
         modelHelper.update();
+
+    // Arrows
+    if(generateConfig)
+        mggArrows.position.copy(generateConfig.position);
 
     // Camera
     camera.lookAt(hero.position);

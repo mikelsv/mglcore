@@ -124,6 +124,10 @@ const lights = {
     }
 };
 
+// Helpers
+let lightHelper = new THREE.PointLightHelper(lights.ambientLight.item, .5);
+scene.add(lightHelper);
+
 // [Stats sections]
 let stats;
 if(mglBuild.debug){
@@ -138,6 +142,12 @@ mglInitSections.waitForReady(() => mglModels.isReady(), gameStart);
 function gameStart(){
     mglBuild.log("Start game!", gamer.projectName, gamer.projectVers[0]);
     mglBuild.startGame();
+
+    mglBuild.page.setTitle("Models and lighing", `
+Combine light and models.
+<p>
+Use WASD or arrow keys to move the light source. And mouse to control the orbit.
+    `);
 
     // Config
     lightConfig = {
@@ -155,7 +165,7 @@ function gameStart(){
         height: 1,
         color: 0xff0000,
         groundColor: 0xffffff,
-        material: materials.MeshBasicMaterial,
+        material: materials.MeshPhysicalMaterial,
         transparent: true,
         opacity: 1,
         wireframe: false,
@@ -426,6 +436,10 @@ function updateLight(){
     light.distance = lightConfig.distance;
     light.decay = lightConfig.decay;
     light.power = lightConfig.power;
+
+    // Helper
+    lightHelper.light = light;
+    lightHelper.matrix = lightHelper.light.matrixWorld;
 
     //if(lightConfig.lightCurrent.update)
     //    lightConfig.lightCurrent.update();
