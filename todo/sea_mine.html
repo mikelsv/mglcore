@@ -26,6 +26,9 @@
 <script type="module">
 // [Import section]
 import * as THREE from 'three';
+import {VertexNormalsHelper} from 'three/addons/helpers/VertexNormalsHelper.js';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+
 import {mglLoadingScreen, mglModelsLoader, mglAudioLoader, mglSingleItems, mglGameSpawnClass, mglLights} from 'mglcore/mgl.threejs.js';
 import {mglSingleText2d, mglTextControls, mglTextControls2d, mglCenterModel} from 'mglcore/mgl.threejs.js';
 import {mglStickControl, mglStickControl2d, mglStickControl3d, mglKeyboardControl, mglMoveControl, mglWindowControl} from 'mglcore/mgl.controls.js'
@@ -33,7 +36,7 @@ import {mglGeometry, mglModelGenerator} from 'mglcore/mgl.geometry.js';
 import {mglFlashScreen} from 'mglcore/mgl.screen.js'
 import {mglGlslTextures} from 'mglcore/mgl.texture.js';
 import {mglStats} from 'mglcore/mgl.stats.js';
-import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+
 import GUI from 'lil-gui';
 
 // [Render section]
@@ -60,7 +63,10 @@ const gui = new GUI();
 // Config
 let modelConfig = {
     wireframe: false,
+    flatShading: false,
     clearColor: false,
+    showNormals: false,
+    showNormalsList: [],
     list: []
 };
 
@@ -144,6 +150,7 @@ The task is to generate a model like in blender.
             ior: 1.5,
             //thickness: 0.9,
             //envMapIntensity: 0,
+            //flatShading: true,
         };
 
         mmg.addGroup("red");
@@ -175,9 +182,19 @@ The task is to generate a model like in blender.
         updateModels();
     });
 
-        controlGui.add(modelConfig, 'clearColor').onChange((value) => {
+    controlGui.add(modelConfig, 'flatShading').onChange((value) => {
+        modelConfig.flatShading = value;
+        updateModels();
+    });
+
+    controlGui.add(modelConfig, 'clearColor').onChange((value) => {
         modelConfig.clearColor = value;
         updateModels();
+    });
+
+    controlGui.add(modelConfig, 'showNormals').onChange((value) => {
+        modelConfig.showNormals = value;
+        updateModels(1);
     });
 
     // Lights
@@ -193,9 +210,9 @@ The task is to generate a model like in blender.
     mglModels.getScreen().hideScreen();
 }
 
-function updateOneModel(model){
+function updateOneModel(model, type){
     for(const child of model.children){
-        updateOneModel(child);
+        updateOneModel(child, type);
     }
 
     if(model.material){
@@ -211,13 +228,30 @@ function updateOneModel(model){
         }
 
         model.material.wireframe = modelConfig.wireframe;
+        model.material.flatShading = modelConfig.flatShading;
+        model.material.needsUpdate = true;
     }
 
+    if(type == 1 && model.type == "Mesh"){
+        const item = new VertexNormalsHelper(model, 0.5, 0x00ff00, 1);
+        modelConfig.showNormalsList.push(item);
+        scene.add(item);
+    }
 }
 
-function updateModels(){
+function updateModels(type = 0){
+    // Normals
+    if(type == 1 && !modelConfig.showNormals){
+        for(const item of modelConfig.showNormalsList){
+            scene.remove(item);
+        }
+
+        modelConfig.showNormalsList.length = 0;
+        return ;
+    }
+
     for(const model of modelConfig.list){
-        updateOneModel(model);
+        updateOneModel(model, type);
     }
 }
 

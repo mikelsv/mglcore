@@ -839,15 +839,11 @@ export class mglModelGenerator{
         const build = new THREE.Group();
 
         for(const group of this.groups){
-            console.log(group);
-
             let geometry = group.mgg.buildGeometry();
             let material = group.material ? group.material : new THREE.MeshBasicMaterial({ color: 0xffc0c0});
             let mesh = new THREE.Mesh(geometry, material);
             build.add(mesh);
         }
-
-        console.log(build);
 
         return build;
     }
@@ -892,14 +888,26 @@ export class mglModelGeneratorExt extends mglModelGenerator{
             }
 
             function makeMine(mmg){
+                const mat = {
+                    //transmission: 0.5,
+                    roughness: 0.4,
+                    metalness: 0.1,
+                    //clearcoat: 0.9,
+                    //clearcoatRoughness: 0.9,
+                    ior: 1.5,
+                    //thickness: 0.9,
+                    //envMapIntensity: 0,
+                    //flatShading: true,
+                };
+
                 mmg.addGroup("red");
-                mmg.setMaterial(new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+                mmg.setMaterial(new THREE.MeshPhysicalMaterial({ color: 0xff0000, ...mat }));
                 mmg.addModelName("sphere", {segments: 16});
 
-                mmg.addGroup("black").setMaterial(new THREE.MeshBasicMaterial({ color: 0x000000 }));
+                mmg.addGroup("black").setMaterial(new THREE.MeshPhysicalMaterial({ color: 0x000000, ...mat }));
                 mmg.addModelName("ring", { radius: .95, tube: .1, rotation: [Math.PI / 2, 0, 0]});
 
-                mmg.addGroup("white").setMaterial(new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                mmg.addGroup("white").setMaterial(new THREE.MeshPhysicalMaterial({ color: 0xffffff, ...mat }));
 
                 makeMineSpikes(mmg, 1);
                 makeMineSpikes(mmg, -1);
