@@ -65,7 +65,9 @@ let modelConfig = {
     wireframe: false,
     flatShading: false,
     clearColor: false,
-    showNormals: false,
+    showNormalsRed: false,
+    showNormalsBlack: false,
+    showNormalsWhite: false,
     showNormalsList: [],
     list: []
 };
@@ -153,6 +155,8 @@ The task is to generate a model like in blender.
             //flatShading: true,
         };
 
+        mmg.addErase({ name: "sphere", radius: 1 });
+
         mmg.addGroup("red");
         mmg.setMaterial(new THREE.MeshPhysicalMaterial({ color: 0xff0000, ...mat }));
         mmg.addModelName("sphere", {segments: 16});
@@ -195,9 +199,19 @@ The task is to generate a model like in blender.
         updateModels();
     });
 
-    controlGui.add(modelConfig, 'showNormals').onChange((value) => {
-        modelConfig.showNormals = value;
-        updateModels(1);
+    controlGui.add(modelConfig, 'showNormalsRed').onChange((value) => {
+        modelConfig.showNormalsRed = value;
+        updateNormalsModels(1, value);
+    });
+
+    controlGui.add(modelConfig, 'showNormalsBlack').onChange((value) => {
+        modelConfig.showNormalsBlack = value;
+        updateNormalsModels(2, value);
+    });
+
+    controlGui.add(modelConfig, 'showNormalsWhite').onChange((value) => {
+        modelConfig.showNormalsWhite = value;
+        updateNormalsModels(3, value);
     });
 
     // Lights
@@ -213,21 +227,21 @@ The task is to generate a model like in blender.
     mglModels.getScreen().hideScreen();
 }
 
-function updateOneModel(model, type){
+function updateOneModel(model, type, id){
     for(const child of model.children){
-        updateOneModel(child, type);
+        updateOneModel(child, type, id);
     }
 
     if(model.material){
         if(model.material.color)
         if(modelConfig.clearColor){
-            if(!model.color_save)
-                model.color_save = new THREE.Color(model.material.color.getHex());
+            if(!model.colorSave)
+                model.colorSave = new THREE.Color(model.material.color.getHex());
 
             model.material.color.setHex(0xffffff);
         } else {
-            if(model.color_save)
-                model.material.color = new THREE.Color(model.color_save.getHex());
+            if(model.colorSave)
+                model.material.color = new THREE.Color(model.colorSave.getHex());
         }
 
         model.material.wireframe = modelConfig.wireframe;
@@ -235,28 +249,42 @@ function updateOneModel(model, type){
         model.material.needsUpdate = true;
     }
 
+    function testNormalHelper(id, testId, color){
+        if(model.material.color.equals(new THREE.Color(color)) && id == testId){
+            const item = new VertexNormalsHelper(model, 0.5, 0x00ff00, 1);
+            item.mglHelperId = testId;
+            modelConfig.showNormalsList.push(item);
+            scene.add(item);
+        }
+    }
+
     if(type == 1 && model.type == "Mesh"){
-        //&& model.material.color.equals(new THREE.Color(0xffffff))
-        const item = new VertexNormalsHelper(model, 0.5, 0x00ff00, 1);
-        modelConfig.showNormalsList.push(item);
-        scene.add(item);
+        testNormalHelper(id, 1, 0xff0000);
+        testNormalHelper(id, 2, 0x00000);
+        testNormalHelper(id, 3, 0xffffff);
     }
 }
 
-function updateModels(type = 0){
-    // Normals
-    if(type == 1 && !modelConfig.showNormals){
-        for(const item of modelConfig.showNormalsList){
-            scene.remove(item);
-        }
+function updateModels(type = 0, id){
+    for(const model of modelConfig.list){
+        updateOneModel(model, type, id);
+    }
+}
 
-        modelConfig.showNormalsList.length = 0;
+function updateNormalsModels(id, value){
+    if(!value){
+        for(let i = modelConfig.showNormalsList.length - 1; i >= 0; i --){
+            const item = modelConfig.showNormalsList[i];
+
+            if(item.mglHelperId == id){
+                scene.remove(item);
+                modelConfig.showNormalsList.splice(i, 1);
+            }
+        }
         return ;
     }
 
-    for(const model of modelConfig.list){
-        updateOneModel(model, type);
-    }
+    updateModels(1, id);
 }
 
 // [Controls section]

@@ -145,8 +145,6 @@ export class mglGeometryGenerator{
     indices = [];
     uvs = [];
 
-    verticeNow = 0;
-
     getVertCount(){
         return this.vertices.length;
     }
@@ -160,29 +158,45 @@ export class mglGeometryGenerator{
     }
 
     getVertLenNow(){
-        return this.vertices.length - this.verticeNow * 3;
+        return this._vertices.length;
     }
 
     beginModel(){
-        this.verticeNow = this.vertices.length / 3;
-        //this.indicesId = this.indices.length;
+        this._vertices = [];
+        this._normals = [];
+        this._indices = [];
+        this._uvs = [];
     }
 
-    addVertice(x, y, z){
-        this.vertices.push(x, y, z);
+    endModel(){
+        if(this.erases)
+            this.useEraces();
+
+        const vertMove = this.vertices.length / 3;
+
+        for(let i = 0; i < this._indices.length; i ++)
+            this.indices.push(this._indices[i] + vertMove);
+
+        this.vertices.push(...this._vertices);
+        this.normals.push(...this._normals);
+        this.uvs.push(...this._uvs);
     }
 
-    addVerticeNorm(x, y, z, nx, ny, nz){
-        this.vertices.push(x, y, z);
-        this.normals.push(nx, ny, nz);
+    addVert(x, y, z){
+        this._vertices.push(x, y, z);
+    }
+
+    addVertNorm(x, y, z, nx, ny, nz){
+        this._vertices.push(x, y, z);
+        this._normals.push(nx, ny, nz);
     }
 
     addUv(x, y){
-        this.uvs.push(x, y);
+        this._uvs.push(x, y);
     }
 
     addIndex(x, y, z){
-        this.indices.push(x + this.verticeNow, y + this.verticeNow, z + this.verticeNow);
+        this._indices.push(x, y, z);
     }
 
     makeCube(_options = {}){
@@ -238,13 +252,10 @@ export class mglGeometryGenerator{
 
             // Добавляем 4 вершины грани
             for (let i = 0; i < 4; i++) {
-            const vertex = new THREE.Vector3().fromArray(faceVertices[faceIdx][i]);
-            vertex.applyQuaternion(quaternion).add(center);
+                const vertex = new THREE.Vector3().fromArray(faceVertices[faceIdx][i]);
+                vertex.applyQuaternion(quaternion).add(center);
 
-            //vertices.push(vertex.x, vertex.y, vertex.z);
-            //normals.push(faceNormal.x, faceNormal.y, faceNormal.z);
-            //uvs.push(...face.uv[i]);
-                this.addVerticeNorm(vertex.x, vertex.y, vertex.z, faceNormal.x, faceNormal.y, faceNormal.z);
+                this.addVertNorm(vertex.x, vertex.y, vertex.z, faceNormal.x, faceNormal.y, faceNormal.z);
                 this.addUv(face.uv[i][0], face.uv[i][1]);
             }
 
@@ -254,176 +265,8 @@ export class mglGeometryGenerator{
 
             vertexIndex += 4;
         });
-    }
 
-    makeCube3(size, position = [0, 0, 0], rotation = [0, 0, 0]){
-        this.beginModel();
-
-        const halfSize = size / 2;
-
-        // Вершины куба (8 вершин)
-        const vertices = [
-            // Передняя грань
-            [-halfSize, -halfSize, halfSize],  // 0
-            [halfSize, -halfSize, halfSize],   // 1
-            [halfSize, halfSize, halfSize],    // 2
-            [-halfSize, halfSize, halfSize],   // 3
-
-            // Задняя грань
-            [-halfSize, -halfSize, -halfSize], // 4
-            [halfSize, -halfSize, -halfSize],  // 5
-            [halfSize, halfSize, -halfSize],   // 6
-            [-halfSize, halfSize, -halfSize]   // 7
-        ];
-
-        // Применяем позицию и вращение к вершинам
-        const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
-            new THREE.Euler(rotation[0], rotation[1], rotation[2])
-        );
-
-        const positionedVertices = vertices.map(v => {
-            const vector = new THREE.Vector3(v[0], v[1], v[2]);
-            vector.applyMatrix4(rotationMatrix);
-            vector.add(new THREE.Vector3(...position));
-            return [vector.x, vector.y, vector.z];
-        });
-
-        // Добавляем вершины
-        positionedVertices.forEach(v => {
-            this.addVertice(v[0], v[1], v[2]);
-        });
-
-        // Индексы для 12 треугольников (6 граней по 2 треугольника)
-        const indices = [
-            // Передняя грань
-            [0, 1, 2], [2, 3, 0],
-
-            // Задняя грань
-            [5, 4, 7], [7, 6, 5],
-
-            // Верхняя грань
-            [3, 2, 6], [6, 7, 3],
-
-            // Нижняя грань
-            [4, 5, 1], [1, 0, 4],
-
-            // Левая грань
-            [4, 0, 3], [3, 7, 4],
-
-            // Правая грань
-            [1, 5, 6], [6, 2, 1]
-        ];
-
-        // Добавляем индексы
-        indices.forEach(triangle => {
-            this.addIndex(triangle[0], triangle[1], triangle[2]);
-        });
-    }
-
-    makeCube2(size = 1, position = [0, 0, 0], rotation = [0, 0, 0]){
-        const half = size / 2;
-
-        // Вершины куба (8 вершин)
-        const vertices = [
-            // Передняя грань
-            [-half, -half, half],  // 0
-            [half, -half, half],   // 1
-            [half, half, half],    // 2
-            [-half, half, half],   // 3
-
-            // Задняя грань
-            [-half, -half, -half], // 4
-            [half, -half, -half],  // 5
-            [half, half, -half],   // 6
-            [-half, half, -half]   // 7
-        ];
-
-        // Нормали для каждой грани
-        const faceNormals = [
-            [0, 0, 1],   // Передняя
-            [0, 0, -1],  // Задняя
-            [0, 1, 0],   // Верхняя
-            [0, -1, 0],  // Нижняя
-            [-1, 0, 0],  // Левая
-            [1, 0, 0]    // Правая
-        ];
-
-        // UV-координаты (для каждой вершины каждой грани)
-        const uvCoords = [
-            [0, 0], [1, 0], [1, 1], [0, 1] // Стандартные для каждой грани
-        ];
-
-        // Индексы вершин для 12 треугольников (6 граней × 2 треугольника)
-        const faces = [
-            // Передняя грань (z+)
-            { v: [0, 1, 2, 3], n: 0, uv: uvCoords },
-            // Задняя грань (z-)
-            { v: [5, 4, 7, 6], n: 1, uv: uvCoords },
-            // Верхняя грань (y+)
-            { v: [3, 2, 6, 7], n: 2, uv: uvCoords },
-            // Нижняя грань (y-)
-            { v: [4, 5, 1, 0], n: 3, uv: uvCoords },
-            // Левая грань (x-)
-            { v: [4, 0, 3, 7], n: 4, uv: uvCoords },
-            // Правая грань (x+)
-            { v: [1, 5, 6, 2], n: 5, uv: uvCoords }
-        ];
-
-        // Применяем позицию и вращение
-        const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
-            new THREE.Euler(rotation[0], rotation[1], rotation[2])
-        );
-        const posVector = new THREE.Vector3().fromArray(position);
-
-        // Результирующие данные
-        /*const result = {
-            vertices: [],
-            normals: [],
-            uvs: [],
-            indices: []
-        };*/
-
-        let vertexIndex = 0;
-
-        // Обрабатываем каждую грань
-        faces.forEach(face => {
-            // Индексы вершин для двух треугольников грани
-            const tri1 = [face.v[0], face.v[1], face.v[2]];
-            const tri2 = [face.v[0], face.v[2], face.v[3]];
-
-            // Добавляем индексы
-            //result.indices.push(vertexIndex, vertexIndex + 1, vertexIndex + 2);
-            //result.indices.push(vertexIndex + 3, vertexIndex + 4, vertexIndex + 5);
-            this.addIndex(vertexIndex, vertexIndex + 1, vertexIndex + 2);
-            this.addIndex(vertexIndex + 3, vertexIndex + 4, vertexIndex + 5);
-            vertexIndex += 6;
-
-            // Обрабатываем оба треугольника
-            [...tri1, ...tri2].forEach(vIdx => {
-            // Вершина
-            const vertex = new THREE.Vector3().fromArray(vertices[vIdx]);
-            vertex.applyMatrix4(rotationMatrix).add(posVector);
-            //result.vertices.push(vertex.x, vertex.y, vertex.z);
-
-            // Нормаль (одинаковая для всех вершин грани)
-            const normal = new THREE.Vector3().fromArray(faceNormals[face.n]);
-            normal.applyMatrix4(rotationMatrix).normalize();
-            //result.normals.push(normal.x, normal.y, normal.z);
-
-            this.addVerticeNorm(vertex.x, vertex.y, vertex.z, normal.x, normal.y, normal.z);
-
-            // UV-координаты (рассчитываем для каждого треугольника)
-            let uv;
-            if (vIdx === face.v[0]) uv = face.uv[0];
-            else if (vIdx === face.v[1]) uv = face.uv[1];
-            else if (vIdx === face.v[2]) uv = face.uv[2];
-            else uv = face.uv[3];
-
-            //result.uvs.push(uv[0], uv[1]);
-            });
-        });
-
-        //return result;
+        this.endModel();
     }
 
     makeSphere(_options = {}){
@@ -473,10 +316,7 @@ export class mglGeometryGenerator{
                 normal.applyQuaternion(quaternion);
 
                 // Добавляем данные
-                //vertices.push(vertex.x, vertex.y, vertex.z);
-                //normals.push(normal.x, normal.y, normal.z);
-                //uvs.push(u, v);
-                this.addVerticeNorm(vertex.x, vertex.y, vertex.z, normal.x, normal.y, normal.z);
+                this.addVertNorm(vertex.x, vertex.y, vertex.z, normal.x, normal.y, normal.z);
                 this.addUv(u, v);
             }
         }
@@ -494,40 +334,8 @@ export class mglGeometryGenerator{
                 this.addIndex(b, d, c);
             }
         }
-    }
 
-    makeSphere2(radius = 1, position = [0, 0, 0], segments = 16){
-        this.beginModel();
-
-        // Генерация вершин сферы (адаптированный алгоритм UV-сферы)
-        const phiSegments = segments;
-        const thetaSegments = segments * 2;
-
-        // Вершины
-        for (let i = 0; i <= phiSegments; i++) {
-            const phi = Math.PI * i / phiSegments;
-
-            for (let j = 0; j <= thetaSegments; j++) {
-                const theta = 2 * Math.PI * j / thetaSegments;
-
-                const x = position[0] + radius * Math.sin(phi) * Math.cos(theta);
-                const y = position[1] + radius * Math.sin(phi) * Math.sin(theta);
-                const z = position[2] + radius * Math.cos(phi);
-
-                this.addVertice(x, y, z);
-            }
-        }
-
-        // Индексы для треугольников
-        for (let i = 0; i < phiSegments; i++) {
-            for (let j = 0; j < thetaSegments; j++) {
-                const first = i * (thetaSegments + 1) + j;
-                const second = first + thetaSegments + 1;
-
-                this.addIndex(first, second, first + 1);
-                this.addIndex(second, second + 1, first + 1);
-            }
-        }
+        this.endModel();
     }
 
     makeRing(_options = {}){
@@ -578,10 +386,7 @@ export class mglGeometryGenerator{
                 normal.applyQuaternion(quaternion);
 
                 // Добавляем данные
-                //vertices.push(vertex.x, vertex.y, vertex.z);
-                //normals.push(normal.x, normal.y, normal.z);
-                //uvs.push(uvX, uvY);
-                this.addVerticeNorm(vertex.x, vertex.y, vertex.z, normal.x, normal.y, normal.z);
+                this.addVertNorm(vertex.x, vertex.y, vertex.z, normal.x, normal.y, normal.z);
                 this.addUv(uvX, uvY);
             }
         }
@@ -595,12 +400,12 @@ export class mglGeometryGenerator{
                 const d = (options.tubularSegments + 1) * (j - 1) + i;
 
                 // Два треугольника образуют квад
-                //indices.push(a, b, d);
-                //indices.push(b, c, d);
                 this.addIndex(a, d, b);
                 this.addIndex(b, d, c);
             }
         }
+
+        this.endModel();
     }
 
     makeCylinder(_options = {}){
@@ -650,10 +455,7 @@ export class mglGeometryGenerator{
                 const normal = new THREE.Vector3(nx, ny, nz);
                 normal.applyQuaternion(quaternion).normalize();
 
-                //vertices.push(vertex.x, vertex.y, vertex.z);
-                //normals.push(normal.x, normal.y, normal.z);
-                //uvs.push(u, v);
-                this.addVerticeNorm(vertex.x, vertex.y, vertex.z, normal.x, normal.y, normal.z);
+                this.addVertNorm(vertex.x, vertex.y, vertex.z, normal.x, normal.y, normal.z);
                 this.addUv(u, v);
             }
         }
@@ -673,25 +475,21 @@ export class mglGeometryGenerator{
             const baseIndex = this.getVertLenNow() / 3;
 
             // Верхний торец
-            //vertices.push(center.x, center.y + halfLength, center.z);
-            //normals.push(0, 1, 0);
-            //uvs.push(0.5, 0.5);
             const topVertex = new THREE.Vector3(0, halfLength, 0);
             const topNormal = new THREE.Vector3(0, 1, 0);
             topVertex.applyQuaternion(quaternion).add(center);
             topNormal.applyQuaternion(quaternion).normalize();
-            this.addVerticeNorm(topVertex.x, topVertex.y, topVertex.z, topNormal.x, topNormal.y, topNormal.z);
+            this.addVertNorm(topVertex.x, topVertex.y, topVertex.z, topNormal.x, topNormal.y, topNormal.z);
             this.addUv(0.5, 0.5);
 
             // Нижний торец
-            //vertices.push(center.x, center.y - halfLength, center.z);
-            //normals.push(0, -1, 0);
-            //uvs.push(0.5, 0.5);
             const bottomVertex = new THREE.Vector3(0, -halfLength, 0);
             const bottomNormal = new THREE.Vector3(0, -1, 0);
+
             bottomVertex.applyQuaternion(quaternion).add(center);
             bottomNormal.applyQuaternion(quaternion).normalize();
-            this.addVerticeNorm(bottomVertex.x, bottomVertex.y, bottomVertex.z, bottomNormal.x, bottomNormal.y, bottomNormal.z);
+
+            this.addVertNorm(bottomVertex.x, bottomVertex.y, bottomVertex.z, bottomNormal.x, bottomNormal.y, bottomNormal.z);
             this.addUv(0.5, 0.5);
 
             // Вершины для торцов
@@ -703,23 +501,21 @@ export class mglGeometryGenerator{
                 // Верхний торец
                 const topVertex = new THREE.Vector3(px, halfLength, pz);
                 const topNormal = new THREE.Vector3(Math.cos(theta), halfLength, Math.sin(theta));
+
                 topVertex.applyQuaternion(quaternion).add(center);
                 topNormal.applyQuaternion(quaternion).normalize();
-                //vertices.push(topVertex.x, topVertex.y, topVertex.z);
-                //normals.push(0, 1, 0);
-                //uvs.push((Math.cos(theta) + 1) / 2, (Math.sin(theta) + 1) / 2);
-                this.addVerticeNorm(topVertex.x, topVertex.y, topVertex.z, topNormal.x, topNormal.y, topNormal.z);
+
+                this.addVertNorm(topVertex.x, topVertex.y, topVertex.z, topNormal.x, topNormal.y, topNormal.z);
                 this.addUv((Math.cos(theta) + 1) / 2, (Math.sin(theta) + 1) / 2);
 
                 // Нижний торец
                 const bottomVertex = new THREE.Vector3(px, -halfLength, pz);
                 const bottomNormal = new THREE.Vector3(Math.cos(theta), -halfLength, Math.sin(theta));
+
                 bottomVertex.applyQuaternion(quaternion).add(center);
                 bottomNormal.applyQuaternion(quaternion).normalize();
-                //vertices.push(bottomVertex.x, bottomVertex.y, bottomVertex.z);
-                //normals.push(0, -1, 0);
-                //uvs.push((Math.cos(theta) + 1) / 2, (Math.sin(theta) + 1) / 2);
-                this.addVerticeNorm(bottomVertex.x, bottomVertex.y, bottomVertex.z, bottomNormal.x, bottomNormal.y, bottomNormal.z);
+
+                this.addVertNorm(bottomVertex.x, bottomVertex.y, bottomVertex.z, bottomNormal.x, bottomNormal.y, bottomNormal.z);
                 this.addUv((Math.cos(theta) + 1) / 2, (Math.sin(theta) + 1) / 2);
             }
 
@@ -729,16 +525,116 @@ export class mglGeometryGenerator{
                 const topCenter = baseIndex;
                 const topA = baseIndex + 2 + x * 2;
                 const topB = baseIndex + 2 + ((x + 1) % options.segments) * 2;
-                //indices.push(topCenter, topA, topB);
                 this.addIndex(topCenter, topB, topA);
 
                 // Нижний торец
                 const bottomCenter = baseIndex + 1;
                 const bottomA = baseIndex + 3 + x * 2;
                 const bottomB = baseIndex + 3 + ((x + 1) % options.segments) * 2;
-                //indices.push(bottomCenter, bottomB, bottomA);
                 this.addIndex(bottomCenter, bottomA, bottomB);
             }
+        }
+
+        this.endModel();
+    }
+
+    // Erases
+    setErases(erases){
+        this.erases = erases;
+    }
+
+    useEraces(){
+        for(const erase of this.erases){
+            if(erase.name == "sphere"){
+                const radius = erase.radius - 0.001;
+
+                const vertices = this._vertices;
+                const indices = this._indices;
+
+                const newIndices = [];
+                const usedVertices = new Set(); // Хранит индексы используемых вершин
+
+                // 1. Фильтрация треугольников
+                for (let i = 0; i < indices.length; i += 3) {
+                    const i0 = indices[i];
+                    const i1 = indices[i + 1];
+                    const i2 = indices[i + 2];
+
+                    // Получаем координаты вершин
+                    const v0 = [vertices[i0 * 3], vertices[i0 * 3 + 1], vertices[i0 * 3 + 2]];
+                    const v1 = [vertices[i1 * 3], vertices[i1 * 3 + 1], vertices[i1 * 3 + 2]];
+                    const v2 = [vertices[i2 * 3], vertices[i2 * 3 + 1], vertices[i2 * 3 + 2]];
+
+                    // Вычисляем расстояние от каждой вершины до (0, 0, 0)
+                    const dist0 = Math.sqrt(v0[0] ** 2 + v0[1] ** 2 + v0[2] ** 2);
+                    const dist1 = Math.sqrt(v1[0] ** 2 + v1[1] ** 2 + v1[2] ** 2);
+                    const dist2 = Math.sqrt(v2[0] ** 2 + v2[1] ** 2 + v2[2] ** 2);
+
+                    // Проверяем, что ВСЕ вершины треугольника внутри сферы радиуса `radius`
+                    const isAllVerticesInside =
+                        dist0 < radius &&
+                        dist1 < radius &&
+                        dist2 < radius;
+
+                    // Если не все вершины маленькие, сохраняем треугольник
+                    if (!isAllVerticesInside) {
+                        newIndices.push(i0, i1, i2);
+                        usedVertices.add(i0);
+                        usedVertices.add(i1);
+                        usedVertices.add(i2);
+                    }
+                }
+
+                // 2. Удаление неиспользуемых вершин и пересчёт индексов
+                const oldToNewIndexMap = {}; // Старые индексы → новые
+                const newVertices = [];
+                let newIndex = 0;
+
+                // Собираем только используемые вершины
+                for (let i = 0; i < vertices.length / 3; i++) {
+                    if (usedVertices.has(i)) {
+                        oldToNewIndexMap[i] = newIndex++;
+                        newVertices.push(
+                            vertices[i * 3],
+                            vertices[i * 3 + 1],
+                            vertices[i * 3 + 2]
+                        );
+                    }
+                }
+
+                 // Если есть нормали и UV, их тоже нужно пересчитать
+                const newNormals = [];
+                for (let i = 0; i < this._normals.length / 3; i++) {
+                    if (usedVertices.has(i)) {
+                        newNormals.push(
+                            this._normals[i * 3],
+                            this._normals[i * 3 + 1],
+                            this._normals[i * 3 + 2]
+                        );
+                    }
+                }
+
+                const newUVs = [];
+                for (let i = 0; i < this._uvs.length / 2; i++) {
+                    if (usedVertices.has(i)) {
+                        newUVs.push(
+                            this._uvs[i * 2],
+                            this._uvs[i * 2 + 1]
+                        );
+                    }
+                }
+
+                // Обновляем индексы в newIndices
+                const finalIndices = newIndices.map(oldIndex => oldToNewIndexMap[oldIndex]);
+
+                // Обновляем исходные массивы
+                this._vertices = newVertices;
+                this._normals = newNormals;
+                this._uvs = newUVs;
+                this._indices = finalIndices;
+            } else
+                mglBuild.error(`mglGeometryGenerator useEraces() erase '${erase.name}' not exist.`);
+
         }
     }
 
@@ -761,7 +657,7 @@ export class mglGeometryGenerator{
             geometry.setIndex(new THREE.BufferAttribute(indeces, 1));
         }
         //geometry.computeVertexNormals();
-
+        //console.log(this.indices);
         return geometry;
     }
 
@@ -777,6 +673,8 @@ export class mglGeometryGenerator{
 export class mglModelGenerator{
     groups = [];
     groupNow = undefined;
+
+    erases = [];
 
     // Group
     addGroup(name){
@@ -815,20 +713,14 @@ export class mglModelGenerator{
         this.groupNow.material = material;
     }
 
-    addModelCube(size = 1, position = [0, 0, 0], rotation = [0, 0, 0]){
-        if(!this.groupNow){
-            mglBuild.warn(`mglModelGenerator addModelCube() create 'noname' group.`);
-            this.addGroup("noname");
-        }
-
-        this.groupNow.mgg.makeCube(size, position, rotation);
-    }
-
     addModelName(name, options){
         if(!this.groupNow){
             mglBuild.warn(`mglModelGenerator addModelCube() create 'noname' group.`);
             this.addGroup("noname");
         }
+
+        if(this.erases)
+            this.groupNow.mgg.setErases(this.erases);
 
         if(name == "cube")
             this.groupNow.mgg.makeCube(options);
@@ -840,6 +732,20 @@ export class mglModelGenerator{
             this.groupNow.mgg.makeCylinder(options);
         else
             mglBuild.error(`mglModelGenerator addModelName() name '${name}' not exist.`);
+    }
+
+    addErase(_options = {}){
+        let options = {
+            position: [0, 0, 0],
+            ..._options
+        };
+
+        if(!options.name){
+            mglBuild.error(`mglModelGenerator addErase() name is undefined.`);
+            return;
+        }
+
+        this.erases.push(options);
     }
 
     buildModel(){
@@ -906,6 +812,8 @@ export class mglModelGeneratorExt extends mglModelGenerator{
                     //envMapIntensity: 0,
                     //flatShading: true,
                 };
+
+                mmg.addErase({ name: "sphere", radius: 1 });
 
                 mmg.addGroup("red");
                 mmg.setMaterial(new THREE.MeshPhysicalMaterial({ color: 0xff0000, ...mat }));
