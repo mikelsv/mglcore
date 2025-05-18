@@ -11,6 +11,10 @@ https://mikelsv.github.io/mglcore/demo/demo_water_voronoi.html - water texture
 
 https://mikelsv.github.io/mglcore/demo/console_logs.html - console demo
 
+## /todo
+
+https://mikelsv.github.io/mglcore/todo/sea_mine.html - Blender and generating a model from primitives.
+
 ## Games
 https://mikelsv.github.io/mglcore/piratespath - The Pirate's Way.
 
@@ -59,7 +63,8 @@ let singleText2d = new mglSingleText2d();
 mglInitSections.waitForReady(() => mglModels.isReady(), gameStart);
 
 function gameStart(){
-    console.log("Start game!", gamer.projectName, gamer.projectVers[0]);
+    mglBuild.log("Start game!", gamer.projectName, gamer.projectVers[0]);
+    mglBuild.startGame();
 }
 
 // [Callback section]
@@ -107,6 +112,8 @@ animate(0);
 0.5 - 17.05.2025 19:27 - Add piratepatch game. Add mglPages for title and description.
 
 0.6 - 18.05.2025 05:25 - Add mglGeometryGenerator and mglModelGenerator for generating models. Add new demo.
+
+0.6a - 18.05.2025 18:52 - ToDo: sea_mine. Blender vs generation.
 
 ## /mglcore - need to refactory and more structure logic.
 mgl.build.js - build functions for any game platforms.

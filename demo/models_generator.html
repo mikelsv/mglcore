@@ -37,6 +37,8 @@ import {VertexNormalsHelper} from 'three/addons/helpers/VertexNormalsHelper.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import GUI from 'lil-gui';
 
+import {lights, materials, mgg, geometry, gui} from './models_and_functions.js';
+
 // [Render section]
 import {scene, camera, renderer, mglInitSections} from 'mglcore/mgl.sections.js';
 mglInitSections.renderSection({ alpha: true, shadow: true });
@@ -60,91 +62,9 @@ let modelConfig, lightConfig, generateConfig;
 const controls = new OrbitControls(camera, renderer.domElement);
 //controls.enableDamping = true;
 
-// Gui
-const gui = new GUI();
-
-// Materials
-const materials = {
-    MeshBasicMaterial: { new: function(){ return new THREE.MeshBasicMaterial(); }},
-    MeshNormalMaterial: { new: function(){ return new THREE.MeshNormalMaterial(); }},
-    MeshLambertMaterial: { new: function(){ return new THREE.MeshLambertMaterial(); }},
-    MeshPhongMaterial: { new: function(){ return new THREE.MeshPhongMaterial(); }},
-    MeshPhysicalMaterial: {
-        new: function(){
-            return new THREE.MeshPhysicalMaterial({ color: 0x00ffff,
-                transmission: 0.5,
-                roughness: 0.1,
-                metalness: 0.0,
-                clearcoat: 0.9,
-                clearcoatRoughness: 0.1,
-                ior: 1.5,
-                thickness: 0.5,
-                envMapIntensity: 1, });
-        }
-    },
-    MeshStandardMaterial: {
-        new: function(){
-            let material = new THREE.MeshStandardMaterial({});
-         }
-    },
-    MeshToonMaterial: { new: function(){ return new THREE.MeshToonMaterial(); }},
-    ShaderMaterial: { new: function(){
-        let textures = new mglGlslTextures();
-        let material = textures.matWaterVoronoi();
-
-        material.update = function(deltaTime){
-            material.uniforms.iTime.value += deltaTime;
-        }
-
-        return material;
-    }}
-};
-
-const lights = {
-    ambientLight: {
-        item: new THREE.AmbientLight(0x606060) // Мягкий белый свет
-    },
-    directionalLight: {
-        item: new THREE.DirectionalLight(0xffffff, 1), // Направленный свет
-        update: function(){
-            this.item.castShadow = true;
-        }
-        // directionalLight.position.set(5, 5, 5).normalize();
-    },
-    hemisphereLight: {
-        item: new THREE.HemisphereLight(0xffffbb, 0x080820, 1)
-    },
-    pointLight: {
-        item: new THREE.PointLight(0xffffff, 1, 100) // Точечный свет
-        // pointLight.position.set(5, 5, 5);
-    },
-    spotLight: {
-        item: new THREE.SpotLight(0xffffff, 1) // Прожектор
-        // spotLight.position.set(5, 5, 5);
-        // spotLight.angle = Math.PI / 6; // Угол освещения
-    }
-};
-
-// Model generator
-let mgg = new mglGeometryGenerator();
 let mggModel;
 let mggArrows = makeArrowsGroup();
 scene.add(mggArrows);
-
-const geometry = {
-    cube:{
-        call: mgg.makeCube.bind(mgg)
-    },
-    sphere:{
-        call: mgg.makeSphere.bind(mgg)
-    },
-    ring:{
-        call: mgg.makeRing.bind(mgg)
-    },
-    cylinder:{
-        call: mgg.makeCylinder.bind(mgg)
-    }
-};
 
 // Helpers
 let lightHelper = new THREE.PointLightHelper(lights.ambientLight.item, .5);
@@ -216,7 +136,6 @@ Use WASD or arrow keys to move the light source. And mouse to control the orbit.
         ior: 1,
         thickness: 0,
         envMapIntensity: 0,
-
     };
 
     // Camera

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<title>Models and ligthing</title>
+		<style>
+            body {
+                margin: 0;
+                overflow: hidden;
+                background-color: #000;
+                touch-action: none;
+            }
+        </style>
+	</head>
+	<body>
+        <div mgl_package>
+            <script src="../mglcore/mgl.package.js"></script>
+            <script>
+                mglPackageInit(null);
+            </script>
+        </div>
+	</body>
+</html>
+
+<script type="module">
+// [Import section]
+import * as THREE from 'three';
+import {mglLoadingScreen, mglModelsLoader, mglAudioLoader, mglSingleItems, mglGameSpawnClass, mglLights} from 'mglcore/mgl.threejs.js';
+import {mglSingleText2d, mglTextControls, mglTextControls2d, mglCenterModel} from 'mglcore/mgl.threejs.js';
+import {mglStickControl, mglStickControl2d, mglStickControl3d, mglKeyboardControl, mglMoveControl, mglWindowControl} from 'mglcore/mgl.controls.js'
+import {mglGeometry, mglModelGenerator} from 'mglcore/mgl.geometry.js';
+import {mglFlashScreen} from 'mglcore/mgl.screen.js'
+import {mglGlslTextures} from 'mglcore/mgl.texture.js';
+import {mglStats} from 'mglcore/mgl.stats.js';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import GUI from 'lil-gui';
+
+// [Render section]
+import {scene, camera, renderer, mglInitSections} from 'mglcore/mgl.sections.js';
+mglInitSections.renderSection({ alpha: true, shadow: true });
+
+// [Load section]
+var mglModels = new mglModelsLoader();
+mglModels.setScreen(new mglLoadingScreen());
+
+mglModels.loadModel('sea_mine', '../piratespath/models/sea_mine_sw.glb');
+
+// [Init section]
+await mglInitSections.initSection(mglModels);
+
+// [Global section]
+
+// Add OrbitControls to rotate the camera
+const controls = new OrbitControls(camera, renderer.domElement);
+
+// Gui
+const gui = new GUI();
+
+// Config
+let modelConfig = {
+    wireframe: false,
+    clearColor: false,
+    list: []
+};
+
+let stats;
+if(mglBuild.debug){
+    stats = new mglStats(renderer);
+    stats.showAllPanels();
+}
+
+// [Start section]
+mglInitSections.waitForReady(() => mglModels.isReady(), gameStart);
+
+// Start game
+function gameStart(){
+    mglBuild.log("Start game!", gamer.projectName, gamer.projectVers[0]);
+    mglBuild.startGame();
+
+    // Title
+    mglBuild.page.setTitle("ToDo: sea mine", `
+While creating a sea mine model in blender, consisting of a sphere, a ring and 18 cylinders, I found that the glb model takes up 600kb!
+<p>
+Seriously? This is not optimal. How about creating the model in the engine?
+<p>
+The blender model is on the left. The model created by my mglModelGenerator class is on the right.
+<p>
+The task is to generate a model like in blender.
+    `);
+
+    // Mine blender
+    const sea_mine = mglModels.getModel('sea_mine').scene;
+    sea_mine.position.x = -2;
+
+    modelConfig.list.push(sea_mine);
+    scene.add(sea_mine);
+
+    // Mine generated
+    let mmg = new mglModelGenerator();
+
+    function makeMineSpikeOne(mmg, position, rotation){
+        let segments = 8;
+
+        mmg.useGroup("black");
+        mmg.addModelName("cylinder", { radius: 0.25, length: 0.05, segments: segments * 2, position: position, rotation: rotation });
+
+        mmg.useGroup("red");
+        mmg.addModelName("cylinder", { radius: 0.101, length: 0.25, segments: segments, position: position, rotation: rotation });
+
+        mmg.useGroup("white");
+        mmg.addModelName("cylinder", { radius: 0.1, length: 0.5, segments: segments, position: position, rotation: rotation });
+    }
+
+    function makeMineSpikeRing(mmg, mul, angleSpikes, angleMove){
+        let spikes = 4;
+        let radius = 1;
+
+        for(let i = 0; i < spikes; i ++){
+            let angle = (i / spikes) * (2 * Math.PI) + angleMove; // Угол для каждого штырька
+            let x = radius * Math.cos(angleSpikes) * Math.cos(angle); // X-координата
+            let y = radius * Math.sin(angleSpikes) * mul; // Y-координата
+            let z = radius * Math.sin(angle) * Math.cos(angleSpikes); // Высота штырька (выше сферы)
+
+            makeMineSpikeOne(mmg, [x, y, z], [Math.asin(z / radius) * mul, 0, -Math.atan2(x, y)]);
+        }
+    }
+
+    function makeMineSpikes(mmg, mul){
+        let angle = Math.PI / 8;
+
+        makeMineSpikeOne(mmg, [0, mul, 0], [0, 0, 0]);
+        makeMineSpikeRing(mmg, mul, angle, 0);
+        makeMineSpikeRing(mmg, mul, angle * 2, Math.PI / 4);
+    }
+
+    function makeMine(mmg){
+        const mat = {
+//            transmission: 0.5,
+            roughness: 0.4,
+            metalness: 0.1,
+            //clearcoat: 0.9,
+            //clearcoatRoughness: 0.9,
+            ior: 1.5,
+            //thickness: 0.9,
+            //envMapIntensity: 0,
+        };
+
+        mmg.addGroup("red");
+        mmg.setMaterial(new THREE.MeshPhysicalMaterial({ color: 0xff0000, ...mat}));
+        mmg.addModelName("sphere", {segments: 16});
+
+        mmg.addGroup("black").setMaterial(new THREE.MeshPhysicalMaterial({ color: 0x000000 }));
+        mmg.addModelName("ring", { radius: .95, tube: .1, rotation: [Math.PI / 2, 0, 0]});
+
+        mmg.addGroup("white").setMaterial(new THREE.MeshPhysicalMaterial({ color: 0xffffff }));
+
+        makeMineSpikes(mmg, 1);
+        makeMineSpikes(mmg, -1);
+    }
+
+    makeMine(mmg);
+
+    const mesh = mmg.buildModel();
+    mesh.position.x = 2;
+
+    modelConfig.list.push(mesh);
+    scene.add(mesh);
+
+    // Gui
+    let controlGui = gui.addFolder('Control');
+
+    controlGui.add(modelConfig, 'wireframe').onChange((value) => {
+        modelConfig.wireframe = value;
+        updateModels();
+    });
+
+        controlGui.add(modelConfig, 'clearColor').onChange((value) => {
+        modelConfig.clearColor = value;
+        updateModels();
+    });
+
+    // Lights
+    scene.add( new THREE.HemisphereLight( 0x8d7c7c, 0x494966, 3 ) );
+    mglLights.addShadowedLight(scene, 1, 1, 1, 0xffffff, 3.5 );
+    mglLights.addShadowedLight(scene, 0.5, 1, - 1, 0xffd500, 3 );
+
+    // Camera
+    camera.position.y = 5;
+    camera.position.z = 5;
+
+    // Hide loading screen
+    mglModels.getScreen().hideScreen();
+}
+
+function updateOneModel(model){
+    for(const child of model.children){
+        updateOneModel(child);
+    }
+
+    if(model.material){
+        if(model.material.color)
+        if(modelConfig.clearColor){
+            if(!model.color_save)
+                model.color_save = new THREE.Color(model.material.color.getHex());
+
+            model.material.color.setHex(0xffffff);
+        } else {
+            if(model.color_save)
+                model.material.color = new THREE.Color(model.color_save.getHex());
+        }
+
+        model.material.wireframe = modelConfig.wireframe;
+    }
+
+}
+
+function updateModels(){
+    for(const model of modelConfig.list){
+        updateOneModel(model);
+    }
+}
+
+// [Controls section]
+let moveControl = new mglMoveControl();
+moveControl.initKeyboard();
+
+// [Animate section]
+let lastTime = 0;
+
+function animate(time) {
+    requestAnimationFrame(animate);
+
+    // Stats
+    if(mglBuild.debug)
+        stats.beginAnimate();
+
+    // Calculate the time elapsed since the last frame
+    const deltaTime = (time - lastTime) / 1000;
+    lastTime = time;
+
+    // Move
+    let move = moveControl.getMoveFromCamera(camera, deltaTime);
+    //hero.position.x += move.x;
+    //hero.position.z += move.y;
+
+    // Light
+    //if(lightConfig && lightConfig.lightCurrent){
+    //    lightConfig.lightCurrent.position.copy(hero.position);
+    //}
+
+    // Camera
+    camera.lookAt(0, 0, 0);
+
+    // Render
+    renderer.render(scene, camera);
+
+    // Stats
+    if(mglBuild.debug)
+        stats.endAnimate();
+}
+
+// Let's start the animation
+animate(0);
+
+// [Extern section]
+mglWindowControl.addResizeEvent(camera, renderer);
+
+if(!mglBuild.debug)
+    mglWindowControl.addDisableContextMenu();
+
+</script>
