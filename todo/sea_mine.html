@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-		<title>Models and ligthing</title>
+		<title>ToDo: sea mine</title>
 		<style>
             body {
                 margin: 0;
@@ -147,13 +147,13 @@ The task is to generate a model like in blender.
         };
 
         mmg.addGroup("red");
-        mmg.setMaterial(new THREE.MeshPhysicalMaterial({ color: 0xff0000, ...mat}));
+        mmg.setMaterial(new THREE.MeshPhysicalMaterial({ color: 0xff0000, ...mat }));
         mmg.addModelName("sphere", {segments: 16});
 
-        mmg.addGroup("black").setMaterial(new THREE.MeshPhysicalMaterial({ color: 0x000000 }));
+        mmg.addGroup("black").setMaterial(new THREE.MeshPhysicalMaterial({ color: 0x000000, ...mat }));
         mmg.addModelName("ring", { radius: .95, tube: .1, rotation: [Math.PI / 2, 0, 0]});
 
-        mmg.addGroup("white").setMaterial(new THREE.MeshPhysicalMaterial({ color: 0xffffff }));
+        mmg.addGroup("white").setMaterial(new THREE.MeshPhysicalMaterial({ color: 0xffffff, ...mat }));
 
         makeMineSpikes(mmg, 1);
         makeMineSpikes(mmg, -1);
