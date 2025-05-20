@@ -98,7 +98,7 @@ export class mglLoadingScreen{
 };
 
 
-const mglModelsState = Object.freeze({
+const mglFilesLoaderState = Object.freeze({
     NONE: 0,
 //    INIT: 1,
     LOADING: 2,
@@ -106,12 +106,17 @@ const mglModelsState = Object.freeze({
     FAIL: 4
 });
 
-// Models loader (png, jpg, svg, stl, gltf, glb, json, ttf, mp3, wav)
-export class mglModelsLoader{
-    state = mglModelsState.READY;
+// Deprecated!
+const mglModelsState = mglFilesLoaderState;
+
+// Files loader (png, jpg, svg, stl, gltf, glb, json, ttf, mp3, wav)
+export class mglFilesLoader{
+    state = mglFilesLoaderState.READY;
     load = [];
-    models = [];
+    files = [];
     error = undefined;
+
+
 
     getScreen(){
         return this.screen;
@@ -123,10 +128,10 @@ export class mglModelsLoader{
 
     // Loading ready: bool
     isReady(){
-        if(this.state == mglModelsState.READY){
+        if(this.state == mglFilesLoaderState.READY){
             if(this.load.length){
-                this.state = mglModelsState.LOADING;
-                this.#loadModelNext();
+                this.state = mglFilesLoaderState.LOADING;
+                this.#loadFileNext();
                 return 0;
             }
 
@@ -136,14 +141,14 @@ export class mglModelsLoader{
         return 0;
     }
 
-    // Load model
-    loadModel(name, url){
-        let model = {
+    // Load file
+    loadFile(name, url){
+        let file = {
             name: name,
             url: url
         };
 
-        this.load.push(model);
+        this.load.push(file);
 
         this.isReady();
     }
@@ -153,9 +158,9 @@ export class mglModelsLoader{
         return parts.length > 1 ? parts.pop() : ''; // Returns the file extension or an empty string.
     }
 
-    #loadModelNext(){
-        const model = this.load.shift();
-        const ext = this.getFileExtension(model.url);
+    #loadFileNext(){
+        const file = this.load.shift();
+        const ext = this.getFileExtension(file.url);
         let loader;
 
         // Loader
@@ -172,8 +177,8 @@ export class mglModelsLoader{
         else if(ext == 'mp3' || ext == 'wav')
             loader = new THREE.AudioLoader();
         else{
-            this.error = "mglModelsClass.loadModelNext(): Unsupported file extension. " + model.url;
-            this.state = mglModelsState.READY;
+            this.error = "mglFilesLoader.loadFileNext(): Unsupported file extension. " + file.url;
+            this.state = mglFilesLoaderState.READY;
             console.error(this.error);
             return ;
         }
@@ -181,40 +186,55 @@ export class mglModelsLoader{
         const loaderClass = this;
 
         if(this.screen){
-            let perc = this.models.length / (this.models.length + this.load.length) * 100;
+            let perc = this.files.length / (this.files.length + this.load.length) * 100;
             if(!perc)
                 perc = 0;
 
-            this.screen.updateScreen(Math.round(perc), model.name);
+            this.screen.updateScreen(Math.round(perc), file.name);
         }
 
         // Load
-        loader.load(model.url, function(object){
-            model.model = object;
-            loaderClass.models.push(model);
+        loader.load(file.url, function(object){
+            file.data = object;
+            loaderClass.files.push(file);
 
-            loaderClass.state = mglModelsState.READY;
+            loaderClass.state = mglFilesLoaderState.READY;
 
         }, undefined, function (error) {
-            loaderClass.state = mglModelsState.READY;
-            loaderClass.error = "mglModelsClass.loadModelNext(): "+ error;
+            loaderClass.state = mglFilesLoaderState.READY;
+            loaderClass.error = `${file.name} (${file.url})`;
 
             if(loaderClass.screen)
-                loaderClass.screen.setError(error);
+                loaderClass.screen.setError(loaderClass.error);
 
-            console.error(loaderClass.error);
+            console.error("mglFilesLoader.loadFileNext(): " + loaderClass.error);
 
-            loaderClass.state = mglModelsState.FAIL;
+            loaderClass.state = mglFilesLoaderState.FAIL;
         });
     }
 
-    // Get model data
-    getModel(name){
-        const model = this.models.find(model => model.name === name);
+    // Get file data
+    getFile(name){
+        const item = this.files.find(file => file.name === name);
 
-        if(model)
-            return model.model;
+        if(item)
+            return item.data;
         return undefined;
+    }
+};
+
+export class mglModelsLoader extends mglFilesLoader{
+    constructor(){
+        super();
+        console.warn("mglModelsLoader is deprecated class! Use new mglFilesLoader!");
+    }
+
+    loadModel(name, url){
+        return this.loadFile(name, url);
+    }
+
+    getModel(name){
+        return this.getFile(name);
     }
 
 };
@@ -223,29 +243,29 @@ export class mglAudioLoader{
     audio = [];
     tweaks = 0;
 
-    load(camera, mglModelsLoader){
+    load(camera, mglFilesLoader){
         // Make audio listener
         const listener = new THREE.AudioListener();
         camera.add(listener);
 
-        for(let i = 0; i < mglModelsLoader.models.length; i ++){
-            let model = mglModelsLoader.models[i];
-            const ext = mglModelsLoader.getFileExtension(model.url);
+        for(let i = 0; i < mglFilesLoader.files.length; i ++){
+            let item = mglFilesLoader.files[i];
+            const ext = mglFilesLoader.getFileExtension(item.url);
 
             if(ext == 'mp3' || ext == 'wav'){
                 let audio = {
-                    name: model.name,
+                    name: item.name,
                     sound: new THREE.Audio(listener)
                 };
 
-                audio.sound.setBuffer(model.model);
+                audio.sound.setBuffer(item.data);
                 this.audio.push(audio);
             }
         }
     }
 
     getAudio(name){
-        return this.audio.find(model => model.name === name);
+        return this.audio.find(item => item.name === name);
     }
 
     play(name, tweak){

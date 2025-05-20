@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-		<title>ToDo: sea mine</title>
+		<title>ToDo: sea mine - animate</title>
 		<style>
             body {
                 margin: 0;
@@ -33,6 +33,7 @@ import {mglLoadingScreen, mglFilesLoader, mglAudioLoader, mglSingleItems, mglGam
 import {mglSingleText2d, mglTextControls, mglTextControls2d, mglCenterModel} from 'mglcore/mgl.threejs.js';
 import {mglStickControl, mglStickControl2d, mglStickControl3d, mglKeyboardControl, mglMoveControl, mglWindowControl} from 'mglcore/mgl.controls.js'
 import {mglGeometry, mglModelGenerator} from 'mglcore/mgl.geometry.js';
+import {mglAnimation, mglSeaMineModel} from 'mglcore/mgl.models.js';
 import {mglFlashScreen} from 'mglcore/mgl.screen.js'
 import {mglGlslTextures} from 'mglcore/mgl.texture.js';
 import {mglStats} from 'mglcore/mgl.stats.js';
@@ -60,6 +61,9 @@ const controls = new OrbitControls(camera, renderer.domElement);
 // Gui
 const gui = new GUI();
 
+// Animations
+let animations = [ "none", "wobble", "rotate", "blink", "shakeZoom", "shake", "figureEight" ];
+
 // Config
 let modelConfig = {
     wireframe: false,
@@ -68,9 +72,18 @@ let modelConfig = {
     showNormalsRed: false,
     showNormalsBlack: false,
     showNormalsWhite: false,
+    animateWobble: false,
+    animateRotate: false,
+    animateBlink: false,
+    animateShakeZoom: false,
     showNormalsList: [],
     list: []
 };
+
+let mglMine = mglSeaMineModel.buildModel();
+new mglAnimation(mglMine);
+//let mglMineMixer = new THREE.AnimationMixer(mglMine);
+//let mglMineAction;
 
 let stats;
 if(mglBuild.debug){
@@ -87,14 +100,10 @@ function gameStart(){
     mglBuild.startGame();
 
     // Title
-    mglBuild.page.setTitle("ToDo: sea mine", `
-While creating a sea mine model in blender, consisting of a sphere, a ring and 18 cylinders, I found that the glb model takes up 600kb!
+    mglBuild.page.setTitle("ToDo: sea mine animate", `
+Now our task is to animate the sea mine. Let's do it!
 <p>
-Seriously? This is not optimal. How about creating the model in the engine?
-<p>
-The blender model is on the left. The model created by my mglModelGenerator class is on the right.
-<p>
-The task is to generate a model like in blender.
+We need to implement the effects: shaking, rotation, resizing, explosion, fire.
     `);
 
     // Mine blender
@@ -104,78 +113,7 @@ The task is to generate a model like in blender.
     modelConfig.list.push(sea_mine);
     scene.add(sea_mine);
 
-    // Mine generated
-    let mmg = new mglModelGenerator();
-
-    function makeMineSpikeOne(mmg, position, rotation){
-        let segments = 8;
-
-        mmg.useGroup("black");
-        mmg.addModelName("cylinder", { radius: 0.25, length: 0.05, segments: segments * 2, position: position, rotation: rotation });
-
-        mmg.useGroup("red");
-        mmg.addModelName("cylinder", { radius: 0.101, length: 0.25, segments: segments, position: position, rotation: rotation });
-
-        mmg.useGroup("white");
-        mmg.addModelName("cylinder", { radius: 0.1, length: 0.5, segments: segments, position: position, rotation: rotation });
-    }
-
-    function makeMineSpikeRing(mmg, mul, angleSpikes, angleMove){
-        let spikes = 4;
-        let radius = 1;
-
-        for(let i = 0; i < spikes; i ++){
-            let angle = (i / spikes) * (2 * Math.PI) + angleMove; // Угол для каждого штырька
-            let x = radius * Math.cos(angleSpikes) * Math.cos(angle); // X-координата
-            let y = radius * Math.sin(angleSpikes) * mul; // Y-координата
-            let z = radius * Math.sin(angle) * Math.cos(angleSpikes); // Высота штырька (выше сферы)
-
-            makeMineSpikeOne(mmg, [x, y, z], [Math.asin(z / radius) * mul, 0, -Math.atan2(x, y)]);
-        }
-    }
-
-    function makeMineSpikes(mmg, mul){
-        let angle = Math.PI / 8;
-
-        makeMineSpikeOne(mmg, [0, mul, 0], [0, 0, 0]);
-        makeMineSpikeRing(mmg, mul, angle, 0);
-        makeMineSpikeRing(mmg, mul, angle * 2, Math.PI / 4);
-    }
-
-    function makeMine(mmg){
-        const mat = {
-//            transmission: 0.5,
-            roughness: 0.4,
-            metalness: 0.1,
-            //clearcoat: 0.9,
-            //clearcoatRoughness: 0.9,
-            ior: 1.5,
-            //thickness: 0.9,
-            //envMapIntensity: 0,
-            //flatShading: true,
-        };
-
-        mmg.addErase({ name: "sphere", radius: 1 });
-
-        mmg.addGroup("red");
-        mmg.setMaterial(new THREE.MeshPhysicalMaterial({ color: 0xff0000, ...mat }));
-        mmg.addModelName("sphere", {segments: 16});
-
-        mmg.addGroup("black").setMaterial(new THREE.MeshPhysicalMaterial({ color: 0x000000, ...mat }));
-        mmg.addModelName("ring", { radius: .95, tube: .1, rotation: [Math.PI / 2, 0, 0]});
-
-        mmg.addGroup("white").setMaterial(new THREE.MeshPhysicalMaterial({ color: 0xffffff, ...mat }));
-
-        makeMineSpikes(mmg, 1);
-        makeMineSpikes(mmg, -1);
-
-        //makeMineSpikeOne(mmg, [-2, 0, 0], [0, 0, 0]);
-
-    }
-
-    makeMine(mmg);
-
-    const mesh = mmg.buildModel();
+    const mesh = mglMine;
     mesh.position.x = 2;
 
     modelConfig.list.push(mesh);
@@ -212,6 +150,24 @@ The task is to generate a model like in blender.
     controlGui.add(modelConfig, 'showNormalsWhite').onChange((value) => {
         modelConfig.showNormalsWhite = value;
         updateNormalsModels(3, value);
+    });
+
+    // Animate
+    let animateGui = gui.addFolder('Animate');
+    animateGui.add(modelConfig, 'animateWobble').onChange((value) => {
+        animateMine(1, value);
+    });
+
+    animateGui.add(modelConfig, 'animateRotate').onChange((value) => {
+        animateMine(2, value);
+    });
+
+    animateGui.add(modelConfig, 'animateBlink').onChange((value) => {
+        animateMine(3, value);
+    });
+
+    animateGui.add(modelConfig, 'animateShakeZoom').onChange((value) => {
+        animateMine(4, value);
     });
 
     // Lights
@@ -287,6 +243,131 @@ function updateNormalsModels(id, value){
     updateModels(1, id);
 }
 
+function animateMine(id, value){
+    let name = animations[id];
+
+    if(!value){
+        mglMine.animation.stop(name);
+        return ;
+    }
+
+
+
+    if(name == 'wobble'){
+        let animate = {
+            object: mglMine,
+            saveit: 'rotation',
+            do(value){
+                mglMine.rotation.y = Math.sin(value * Math.PI * 2);
+            },
+        };
+
+        mglMine.animation.addAnimate({
+            name: name,
+            duration: 2,
+            animate: animate,
+            repeat: true
+        });
+    }
+
+    if(name == 'rotate'){
+        let animate = {
+            object: mglMine,
+            saveit: 'rotation',
+            do(value){
+                mglMine.rotation.y = value * Math.PI * 2;
+            },
+        };
+
+        mglMine.animation.addAnimate({
+            name: name,
+            duration: 2,
+            animate: animate,
+            repeat: true
+        });
+    }
+
+    if(name == 'shakeZoom'){
+        let animate = {
+            start(){
+                this._save = mglMine.scale.clone();
+            },
+            do(value){
+                let scale = 1 + 0.5 * Math.sin(2 * Math.PI * value);
+                mglMine.scale.set(scale, scale, scale);
+            },
+            end(){
+                mglMine.scale.copy(this._save);
+            }
+        };
+
+        for(let i = 0; i <= 1; i += .25){
+            let scale = 1 + 0.5 * Math.sin(2 * Math.PI * i);
+            console.log(i, scale);
+        }
+
+        mglMine.animation.addAnimate({
+            name: name,
+            duration: 1,
+            animate: animate,
+            repeat: true,
+            //mirror: true
+            }
+        );
+    }
+
+    if(name == 'blink'){
+        let animate = {
+            start(){
+                let tip = mglMine.getObjectByName("white");
+                this._save = new THREE.Color(tip.material.color.getHex());
+                console.log("S", mglMine);
+
+            },
+            do(value){
+                let tip = mglMine.getObjectByName("white");
+                value = mglEasting.easeInOutBack(value);
+
+                // Цвета в формате RGB
+                const white = new THREE.Color(1, 1, 1); // белый
+                const red = new THREE.Color(1, 0, 0);   // красный
+                tip.material.color = white.clone().lerp(red, value);
+            },
+            end(){
+                let tip = mglMine.getObjectByName("white");
+                tip.material.color = new THREE.Color(this._save.getHex());
+                console.log("E", tip.material.color);
+            }
+        };
+
+        mglMine.animation.addAnimate({
+            name: name,
+            duration: .5,
+            animate: animate,
+            mirror: true,
+            repeat: true
+            }
+        );
+    }
+
+
+
+    // if(id == 0){
+    //     return ;
+    // }
+
+    // let names = ["shake", "figureEight"];
+    // let name = names[id - 1];
+
+    // for(const clip of mglMine.animations){
+    //     if(clip.name == name){
+    //         mglMineAction = mglMineMixer.clipAction(clip);
+    //         mglMineAction.play();
+    //         console.log("play");
+    //     }
+    // }
+}
+
 // [Controls section]
 let moveControl = new mglMoveControl();
 moveControl.initKeyboard();
@@ -314,6 +395,11 @@ function animate(time) {
     //if(lightConfig && lightConfig.lightCurrent){
     //    lightConfig.lightCurrent.position.copy(hero.position);
     //}
+
+    // Mixer
+    //mglMineMixer.update(deltaTime);
+
+    mglMine.animation.update();
 
     // Camera
     camera.lookAt(0, 0, 0);

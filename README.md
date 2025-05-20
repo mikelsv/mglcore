@@ -45,26 +45,28 @@ import {scene, camera, renderer, mglInitSections} from 'mglcore/mgl.sections.js'
 mglInitSections.renderSection({ alpha: true, shadow: false });
 
 // [Load section]
-var mglModels = new mglModelsLoader();
-mglModels.setScreen(new mglLoadingScreen()); // Show loading screen
+var mglFiles = new mglFilesLoader();
+mglFiles.setScreen(new mglLoadingScreen()); // Show loading screen
 
-mglModels.loadModel('font_roboto', './models/Roboto Medium_Regular.json'); // Load file
+mglFiles.loadFile('font_roboto', './models/Roboto Medium_Regular.json'); // Load font file
 
 const mglAudio = new mglAudioLoader();
 
 // [Init section]
-await mglInitSections.initSection(mglModels);
+await mglInitSections.initSection(mglFiles);
 
 // [Global section]
 let gameBuilder = new GameBuilder();
 let singleText2d = new mglSingleText2d();
 
 // [Start section]
-mglInitSections.waitForReady(() => mglModels.isReady(), gameStart);
+mglInitSections.waitForReady(() => mglFiles.isReady(), gameStart);
 
 function gameStart(){
     mglBuild.log("Start game!", gamer.projectName, gamer.projectVers[0]);
     mglBuild.startGame();
+
+    const file = mglFiles.getFile('font_roboto'); // Get file data
 }
 
 // [Callback section]
@@ -113,7 +115,12 @@ animate(0);
 
 0.6 - 18.05.2025 05:25 - Add mglGeometryGenerator and mglModelGenerator for generating models. Add new demo.
 
-0.6a - 18.05.2025 18:52 - ToDo: sea_mine. Blender vs generation.
+0.6abcd - 18.05.2025 18:52 - ToDo: sea_mine. Blender vs generation.
+
+### 0.7 - 21.05.2025 01:30
+[x] mglModelsLoader is deprecated class! Use new mglFilesLoader!
+
+[ ] ToDo: sea_mine animation. Generating a model and animating it from primitives.
 
 ## /mglcore - need to refactory and more structure logic.
 mgl.build.js - build functions for any game platforms.

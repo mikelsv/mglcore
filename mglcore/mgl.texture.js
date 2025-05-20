@@ -366,4 +366,111 @@ void main(){
 
         return m;
     }
+
+
+    // MultilineTextures - make y line multiple textures.
+    // size: {x, y} - place size
+    // textures: [texture1, texture2, ...] - textures
+    // ranges: [yStart, yEnd, textureId, y1Start ...] - ranges
+
+    static matMultilineTextures(size, textures, ranges){
+        // Создаем шейдерный материал
+        const MAX_TEXTURES = textures.length; // Максимальное количество текстур
+        const MAX_RANGES = ranges.length / 3; // Максимальное количество диапазонов (3 значения на диапазон)
+        let textureCode = '';
+
+        // Генерируем строки для выбора текстуры
+        for (let i = 0; i < MAX_TEXTURES; i++) {
+            textureCode += (i ? 'else ' : '') + `if (texIndex == ${i}) gl_FragColor = texture2D(textures[${i}], tiledUv);\n`;
+        }
+
+
+        // Вершинный шейдер
+        const vertexShader = `
+varying vec2 vUv;
+
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+        `;
+
+        // Фрагментный шейдер
+        const fragmentShader = `
+uniform float width;
+uniform float height;
+uniform sampler2D textures[${MAX_TEXTURES}]; // Замените ${MAX_TEXTURES} на максимальное количество текстур
+uniform float ranges[${MAX_RANGES * 3}]; // [y1_start, y1_end, texId1, y2_start, y2_end, texId2, ...]
+uniform int rangesCount;
+
+varying vec2 vUv;
+
+void main() {
+    float yPos = vUv.y * height;
+    int texIndex = -1;
+    float yStart = 0.0;
+    float yRange = 0.0;
+
+    // Поиск подходящего диапазона
+    for(int i = 0; i < ${MAX_RANGES}; i++){
+        if(i >= rangesCount)
+            break;
+
+        int idx = i * 3;
+        yStart = ranges[idx];
+        float yEnd = ranges[idx + 1];
+        int texId = int(ranges[idx + 2]);
+
+        if(yPos >= yStart && yPos <= yEnd){
+            texIndex = texId;
+            yRange = yEnd - yStart;
+            break;
+        }
+    }
+
+    if (texIndex < 0){
+        gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0); // Фиолетовый цвет, если текстура не найдена
+        return;
+    }
+
+    // Тайлинг текстуры
+    vec2 tiledUv;
+    tiledUv.x = fract(vUv.x); // Повторяем по X
+    tiledUv.y = fract((yPos - yStart) / yRange); // Повторяем по Y в пределах своего диапазона
+
+    // Нормализация координат текстуры с учетом размера
+    vec2 scaledUv = vec2(vUv.x * width, (yPos - ranges[texIndex * 3]) / (ranges[texIndex * 3 + 1] - ranges[texIndex * 3]));
+
+    // Получение цвета из соответствующей текстуры
+    ${textureCode}
+    //if (texIndex == 0) gl_FragColor = texture2D(textures[0], tiledUv);
+    //if (texIndex >= 0 && texIndex < ${MAX_TEXTURES})
+    //    gl_FragColor = texture2D(textures[texIndex], tiledUv);
+
+    // Добавьте дополнительные условия для большего количества текстур
+    // ...
+    else
+        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Красный цвет, если текстура не обработана
+}
+`;
+
+
+
+        const material = new THREE.ShaderMaterial({
+            uniforms: {
+                width: { value: size.x }, // Ширина области
+                height: { value: size.y }, // Высота области
+                textures: {
+                    value: textures
+                },
+                ranges: { value: new Float32Array(ranges)},
+                rangesCount: { value: MAX_RANGES }
+            },
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader,
+        });
+
+        return material;
+    }
+
 };

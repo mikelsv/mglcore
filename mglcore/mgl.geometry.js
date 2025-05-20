@@ -145,6 +145,9 @@ export class mglGeometryGenerator{
     indices = [];
     uvs = [];
 
+    // Extend
+    levels = [];
+
     getVertCount(){
         return this.vertices.length;
     }
@@ -538,6 +541,150 @@ export class mglGeometryGenerator{
         this.endModel();
     }
 
+    // Multilevel
+    addLevel(level){
+        this.levels.push(level);
+    }
+
+    cleanLevels(){
+        this.levels.length = 0;
+    }
+
+    makeLevels(_options = {}){
+        let options = {
+            position: [0, 0, 0],
+            rotation: [0, 0, 0],
+            ..._options
+        };
+
+        this.beginModel();
+
+        const levels = this.levels;
+
+        // Проверка на валидность данных
+        if(!levels || levels.length < 2){
+            mglBuild.error("mglGeometryGenerator.makeLevels(): Not enough levels to build a model");
+            return ;
+        }
+
+        // 1. Генерация вершин и UV-координат
+        for(let levelIdx = 0; levelIdx < levels.length; levelIdx++){
+            const level = levels[levelIdx];
+            if (!level.pois || level.pois.length === 0){
+                mglBuild.error(`mglGeometryGenerator.makeLevels(): Level ${levelIdx} does not contain points`, level);
+                continue;
+            }
+
+            const numPoints = level.pois.length;
+            const yPos = levelIdx / (levels.length - 1); // Нормализованная высота для UV
+
+            for (let pointIdx = 0; pointIdx < numPoints; pointIdx++) {
+                const point = level.pois[pointIdx];
+                console.log(point);
+                // Добавляем вершину
+                //vertices.push(point[0], point[1] || levelIdx, point[2]); // Если point.y не задан, используем levelIdx
+                this.addVert(point[0], point[1] || levelIdx, point[2]);
+                // UV: равномерное распределение по X и Z, Y зависит от уровня
+                //uvs.push(pointIdx / numPoints, yPos);
+                this.addUv(pointIdx / numPoints, yPos);
+                // Нормаль будет вычислена позже
+            }
+        }
+
+    // 2. Генерация индексов (соединение уровней)
+    for (let levelIdx = 0; levelIdx < levels.length - 1; levelIdx++) {
+        const currentLevel = levels[levelIdx];
+        const nextLevel = levels[levelIdx + 1];
+        const currentPoints = currentLevel.pois.length;
+        const nextPoints = nextLevel.pois.length;
+
+        // Соединяем текущий уровень со следующим
+        for (let i = 0; i < Math.max(currentPoints, nextPoints); i++) {
+            const currIdx0 = i % currentPoints;
+            const currIdx1 = (i + 1) % currentPoints;
+            const nextIdx0 = i % nextPoints;
+            const nextIdx1 = (i + 1) % nextPoints;
+
+            // Добавляем два треугольника (квад -> два треугольника)
+            this.addIndex(
+                getVertexIndex(levelIdx, currIdx0, currentPoints, levels),
+                getVertexIndex(levelIdx, currIdx1, currentPoints, levels),
+                getVertexIndex(levelIdx + 1, nextIdx0, nextPoints, levels),
+            );
+            this.addIndex(
+                getVertexIndex(levelIdx + 1, nextIdx0, nextPoints, levels),
+
+                getVertexIndex(levelIdx, currIdx1, currentPoints, levels),
+                getVertexIndex(levelIdx + 1, nextIdx1, nextPoints, levels),
+            );
+        }
+    }
+
+    // 3. Вычисление нормалей (усреднение по треугольникам)
+    computeNormals(this._vertices, this._indices, this._normals);
+
+
+    // Вспомогательная функция для вычисления индекса вершины
+    function getVertexIndex(levelIdx, pointIdx, pointsInLevel, levels) {
+        let globalIndex = 0;
+        for (let i = 0; i < levelIdx; i++) {
+            globalIndex += levels[i].pois.length;
+        }
+        return globalIndex + pointIdx;
+    }
+
+    // Вычисление нормалей
+    function computeNormals(vertices, indices, normals) {
+        // Инициализируем массив нормалей нулями
+        normals.length = vertices.length;
+        normals.fill(0);
+
+        // Вычисляем нормали для каждого треугольника
+        for (let i = 0; i < indices.length; i += 3) {
+            const i0 = indices[i] * 3;
+            const i1 = indices[i + 1] * 3;
+            const i2 = indices[i + 2] * 3;
+
+            const v0 = [vertices[i0], vertices[i0 + 1], vertices[i0 + 2]];
+            const v1 = [vertices[i1], vertices[i1 + 1], vertices[i1 + 2]];
+            const v2 = [vertices[i2], vertices[i2 + 1], vertices[i2 + 2]];
+
+            // Векторы сторон треугольника
+            const edge1 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]];
+            const edge2 = [v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]];
+
+            // Векторное произведение (нормаль к треугольнику)
+            const normal = [
+                edge1[1] * edge2[2] - edge1[2] * edge2[1],
+                edge1[2] * edge2[0] - edge1[0] * edge2[2],
+                edge1[0] * edge2[1] - edge1[1] * edge2[0],
+            ];
+
+            // Добавляем нормаль к каждой вершине треугольника
+            for (let j = 0; j < 3; j++) {
+                const idx = indices[i + j] * 3;
+                normals[idx] += normal[0];
+                normals[idx + 1] += normal[1];
+                normals[idx + 2] += normal[2];
+            }
+        }
+
+        // Нормализуем нормали
+        for (let i = 0; i < normals.length; i += 3) {
+            const length = Math.sqrt(
+                normals[i] ** 2 + normals[i + 1] ** 2 + normals[i + 2] ** 2
+            );
+            if (length > 0) {
+                normals[i] /= length;
+                normals[i + 1] /= length;
+                normals[i + 2] /= length;
+            }
+        }
+    }
+
+        this.endModel();
+    }
+
     // Erases
     setErases(erases){
         this.erases = erases;
@@ -755,6 +902,7 @@ export class mglModelGenerator{
             let geometry = group.mgg.buildGeometry();
             let material = group.material ? group.material : new THREE.MeshBasicMaterial({ color: 0xffc0c0});
             let mesh = new THREE.Mesh(geometry, material);
+            mesh.name = group.name;
             build.add(mesh);
         }
 
