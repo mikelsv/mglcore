@@ -15,6 +15,8 @@ https://mikelsv.github.io/mglcore/demo/console_logs.html - console demo
 
 https://mikelsv.github.io/mglcore/todo/sea_mine.html - Blender and generating a model from primitives.
 
+https://mikelsv.github.io/mglcore/todo/sea_mine_animate.html - Generating a model and animating it from primitives.
+
 ## Games
 https://mikelsv.github.io/mglcore/piratespath - The Pirate's Way.
 
@@ -117,7 +119,7 @@ animate(0);
 
 0.6abcd - 18.05.2025 18:52 - ToDo: sea_mine. Blender vs generation.
 
-### 0.7 - 21.05.2025 01:30
+#### 0.7 - 21.05.2025 01:30
 [x] mglModelsLoader is deprecated class! Use new mglFilesLoader!
 
 [ ] ToDo: sea_mine animation. Generating a model and animating it from primitives.
