@@ -122,6 +122,8 @@ animate(0);
 
 [ ] ToDo: sea_mine animation. Generating a model and animating it from primitives.
 
+[x] (a) New mglGlslCombineTextures for combinate glsl textures.
+
 ## /mglcore - need to refactory and more structure logic.
 mgl.build.js - build functions for any game platforms.
 

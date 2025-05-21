@@ -21,11 +21,6 @@ export class mglAnimation{
         let animate = {
             name: "",
             duration: 2,
-            animate: {
-                start(){},
-                do(value){},
-                end(){}
-            },
             repeat: false,
             mirror: false,
             ..._animate
@@ -37,7 +32,8 @@ export class mglAnimation{
     }
 
     startAnimate(animate){
-        animate.startTime = Date.now() * 0.001;
+        animate.beginTime = performance.now() * 0.001;
+        animate.startTime = performance.now() * 0.001;
         animate.endTime = animate.startTime + animate.duration;
 
         if(animate.saveit){
@@ -47,16 +43,21 @@ export class mglAnimation{
                 console.error(`Property "${animate.saveit}" does not exist on the object.`);
         }
 
-        if(animate.animate.start)
+        if(animate.start)
+            animate.start();
+
+        if(animate.animate && animate.animate.start){
+            console.log("animate.animate deprecated!")
             animate.animate.start();
+        }
 
         // Ext
         animate._mirror = false;
     }
 
     updateAnimate(animate){
-        let time = Date.now() * 0.001;
-        //let delta = animate.endTime - animate.startTime;
+        let time = performance.now() * 0.001;
+        //let deltaTime = animate.endTime - animate.startTime;
 
         if(time > animate.endTime){
             if(!animate.repeat)
@@ -65,7 +66,7 @@ export class mglAnimation{
             if(animate.mirror)
                 animate._mirror = !animate._mirror;
 
-            animate.startTime = time;
+            animate.startTime = animate.endTime;
             animate.endTime = animate.startTime + animate.duration;
         }
 
@@ -74,7 +75,11 @@ export class mglAnimation{
         if(animate._mirror)
             value = 1 - value;
 
-        animate.animate.do(value);
+        if(animate.do)
+            animate.do(value);
+
+        if(animate.animate && animate.animate.do)
+            animate.animate.do(value);
     }
 
     endAnimate(animate){
@@ -82,7 +87,10 @@ export class mglAnimation{
             animate.object[animate.saveit].copy(animate._save);
         }
 
-        if(animate.animate.end)
+        if(animate.end)
+            animate.end();
+
+        if(animate.animate && animate.animate.end)
             animate.animate.end();
     }
 
@@ -101,18 +109,26 @@ export class mglAnimation{
         }
     }
 
-    stop(name){
+    stop(name, now = 0){
         for(let i = this.list.length - 1; i >= 0; i--){
             if(this.list[i].name == name){
-                this.endAnimate(this.list[i]);
-                this.list.splice(i, 1);
+                if(now){
+                    this.endAnimate(this.list[i]);
+                    this.list.splice(i, 1);
+                } else
+                    this.list[i].repeat = false;
+
             }
         }
     }
 
-    stopAll(){
+    stopAll(now = 0){
         for(let i = this.list.length - 1; i >= 0; i--)
-            this.endAnimate(this.list[i]);
+            if(now)
+                this.endAnimate(this.list[i]);
+            else
+                this.list[i].repeat = false;
+
 
         this.list.length = 0;
     }

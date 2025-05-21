@@ -35,7 +35,7 @@ import {mglStickControl, mglStickControl2d, mglStickControl3d, mglKeyboardContro
 import {mglGeometry, mglModelGenerator} from 'mglcore/mgl.geometry.js';
 import {mglAnimation, mglSeaMineModel} from 'mglcore/mgl.models.js';
 import {mglFlashScreen} from 'mglcore/mgl.screen.js'
-import {mglGlslTextures} from 'mglcore/mgl.texture.js';
+import {mglGlslTextures, mglGlslMainExsamples, mglGlslCombineTextures} from 'mglcore/mgl.texture.js';
 import {mglStats} from 'mglcore/mgl.stats.js';
 
 import GUI from 'lil-gui';
@@ -62,7 +62,8 @@ const controls = new OrbitControls(camera, renderer.domElement);
 const gui = new GUI();
 
 // Animations
-let animations = [ "none", "wobble", "rotate", "blink", "shakeZoom", "shake", "figureEight" ];
+let animations = [ "none", "move", "wobble", "rotate", "blink", "shakeZoom", "matColors", "fired", "generate" ];
+let generates = mglGlslMainExsamples.getNamesList();
 
 // Config
 let modelConfig = {
@@ -72,10 +73,16 @@ let modelConfig = {
     showNormalsRed: false,
     showNormalsBlack: false,
     showNormalsWhite: false,
+    animateMovie: false,
     animateWobble: false,
     animateRotate: false,
     animateBlink: false,
     animateShakeZoom: false,
+    animateMatColors: false,
+    animateFired: false,
+    animateGenerate: false,
+    animateGenerateStr: generates[0],
+
     showNormalsList: [],
     list: []
 };
@@ -154,20 +161,44 @@ We need to implement the effects: shaking, rotation, resizing, explosion, fire.
 
     // Animate
     let animateGui = gui.addFolder('Animate');
-    animateGui.add(modelConfig, 'animateWobble').onChange((value) => {
+    animateGui.add(modelConfig, 'animateMovie').onChange((value) => {
         animateMine(1, value);
     });
 
-    animateGui.add(modelConfig, 'animateRotate').onChange((value) => {
+    animateGui.add(modelConfig, 'animateWobble').onChange((value) => {
         animateMine(2, value);
     });
 
-    animateGui.add(modelConfig, 'animateBlink').onChange((value) => {
+    animateGui.add(modelConfig, 'animateRotate').onChange((value) => {
         animateMine(3, value);
     });
 
-    animateGui.add(modelConfig, 'animateShakeZoom').onChange((value) => {
+    animateGui.add(modelConfig, 'animateBlink').onChange((value) => {
         animateMine(4, value);
+    });
+
+    animateGui.add(modelConfig, 'animateShakeZoom').onChange((value) => {
+        animateMine(5, value);
+    });
+
+    animateGui.add(modelConfig, 'animateMatColors').onChange((value) => {
+        animateMine(6, value);
+    });
+
+    animateGui.add(modelConfig, 'animateFired').onChange((value) => {
+        animateMine(7, value);
+    });
+
+    animateGui.add(modelConfig, 'animateGenerate').onChange((value) => {
+        animateMine(8, value);
+    });
+
+    animateGui.add(modelConfig, 'animateGenerateStr', generates).onChange((value) => {
+        modelConfig.animateGenerateStr = value;
+
+        if(modelConfig.animateGenerate){
+            animateMine(8, 1);
+        }
     });
 
     // Lights
@@ -251,7 +282,33 @@ function animateMine(id, value){
         return ;
     }
 
+    if(name == 'move'){
+        let animate = {
+            object: mglMine,
+            saveit: 'position',
+            start(){
+                 this._save = mglMine.position.clone();
+            },
+            do(value){
+                const angle = 2 * Math.PI * value;
+                const x = Math.sin(angle);
+                const z = Math.sin(angle) * Math.cos(angle);
 
+                let position = this._save.clone().add(new THREE.Vector3(x, 0, z));
+                mglMine.position.copy(position);
+            },
+            end(){
+                mglMine.position.copy(this._save);
+            }
+        };
+
+        mglMine.animation.addAnimate({
+            name: name,
+            duration: 2,
+            animate: animate,
+            repeat: true
+        });
+    }
 
     if(name == 'wobble'){
         let animate = {
@@ -301,11 +358,6 @@ function animateMine(id, value){
             }
         };
 
-        for(let i = 0; i <= 1; i += .25){
-            let scale = 1 + 0.5 * Math.sin(2 * Math.PI * i);
-            console.log(i, scale);
-        }
-
         mglMine.animation.addAnimate({
             name: name,
             duration: 1,
@@ -350,6 +402,92 @@ function animateMine(id, value){
         );
     }
 
+    if(name == 'matColors'){
+        let animate = {
+            start(){
+                let model = mglMine.getObjectByName("red");
+                this._save = model.material;
+
+                model.material = new mglGlslTextures().matFourColors();
+            },
+            do(value){
+            },
+            end(){
+                let model = mglMine.getObjectByName("red");
+                model.material = this._save;
+            }
+        };
+
+        mglMine.animation.addAnimate({
+            name: name,
+            duration: .5,
+            animate: animate,
+            mirror: true,
+            repeat: true
+            }
+        );
+    }
+
+    if(name == 'fired'){
+        mglMine.animation.stop(name, true);
+
+        let animate = {
+            start(){
+                let model = mglMine.getObjectByName("red");
+                this._save = model.material;
+
+                model.material = new mglGlslTextures().matGeometryToonFire();
+            },
+            do(value){
+                let model = mglMine.getObjectByName("red");
+                model.material.update(1 - value);
+            },
+            end(){
+                let model = mglMine.getObjectByName("red");
+                model.material = this._save;
+            }
+        };
+
+        mglMine.animation.addAnimate({
+            name: name,
+            duration: 1,
+            animate: animate,
+            mirror: true,
+            repeat: true
+            }
+        );
+    }
+
+    if(name == 'generate'){
+        mglMine.animation.stop(name, true);
+
+
+        mglMine.animation.addAnimate({
+            name: name,
+            duration: 5,
+            mirror: true,
+            repeat: true,
+            start(){
+                let model = mglMine.getObjectByName("red");
+                this._save = model.material;
+
+                let com = new mglGlslCombineTextures();
+                com.addMainTemplate(modelConfig.animateGenerateStr);
+                com.addheightDiscard();
+
+                model.material = com.buildTexture();
+                //model.material = new mglGlslTextures().matGeometryToonFire();
+            },
+            do(value){
+                let model = mglMine.getObjectByName("red");
+                model.material.update(1 - value, this.beginTime);
+            },
+            end(){
+                let model = mglMine.getObjectByName("red");
+                model.material = this._save;
+            }
+        });
+    }
 
 
     // if(id == 0){
