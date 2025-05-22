@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<title>Parametric Modeling. Point Tree Function</title>
+		<style>
+            body {
+                margin: 0;
+                overflow: hidden;
+                background-color: #000;
+                touch-action: none;
+            }
+        </style>
+	</head>
+	<body>
+        <div mgl_package>
+            <script src="../mglcore/mgl.package.js"></script>
+            <script>
+                mglPackageInit(null);
+            </script>
+        </div>
+	</body>
+</html>
+
+<script type="module">
+// [Import section]
+import * as THREE from 'three';
+import {VertexNormalsHelper} from 'three/addons/helpers/VertexNormalsHelper.js';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+
+import {mglLoadingScreen, mglFilesLoader, mglAudioLoader, mglSingleItems, mglGameSpawnClass, mglLights} from 'mglcore/mgl.threejs.js';
+import {mglSingleText2d, mglTextControls, mglTextControls2d, mglCenterModel} from 'mglcore/mgl.threejs.js';
+import {mglStickControl, mglStickControl2d, mglStickControl3d, mglKeyboardControl, mglMoveControl, mglWindowControl} from 'mglcore/mgl.controls.js'
+import {mglGeometry, mglGeometryGenerator, mglModelGenerator} from 'mglcore/mgl.geometry.js';
+import {mglFlashScreen} from 'mglcore/mgl.screen.js'
+import {mglGlslTextures} from 'mglcore/mgl.texture.js';
+import {mglStats} from 'mglcore/mgl.stats.js';
+
+import GUI from 'lil-gui';
+
+// [Render section]
+import {scene, camera, renderer, mglInitSections} from 'mglcore/mgl.sections.js';
+mglInitSections.renderSection({ alpha: true, shadow: true });
+
+// [Load section]
+var mglFiles = new mglFilesLoader();
+mglFiles.setScreen(new mglLoadingScreen());
+
+// [Init section]
+await mglInitSections.initSection(mglFiles);
+
+// [Global section]
+
+// Add OrbitControls to rotate the camera
+const controls = new OrbitControls(camera, renderer.domElement);
+
+// Gui
+const gui = new GUI();
+
+// Config
+let modelConfig = {
+    wireframe: false,
+    flatShading: false,
+    clearColor: false,
+    showNormalsRed: false,
+    showNormalsBlack: false,
+    showNormalsWhite: false,
+    showNormalsList: [],
+    list: []
+};
+
+let stats;
+if(mglBuild.debug){
+    stats = new mglStats(renderer);
+    stats.showAllPanels();
+}
+
+// [Start section]
+mglInitSections.waitForReady(() => mglFiles.isReady(), gameStart);
+
+// Start game
+function gameStart(){
+    mglBuild.log("Start game!", gamer.projectName, gamer.projectVers[0]);
+    mglBuild.startGame();
+
+    // Title
+    mglBuild.page.setTitle("Parametric Modeling. Point Tree Function.", `
+Here we solve the problem of creating a 3D model using the point tree function.
+<br>
+Where we pass a vertex ID as input and get the data (vertices, normals, UVS and indices) and the next ID as output.
+    `);
+
+
+    const mat = {
+//            transmission: 0.5,
+            roughness: 0.4,
+            metalness: 0.1,
+            //clearcoat: 0.9,
+            //clearcoatRoughness: 0.9,
+            ior: 1.5,
+            //thickness: 0.9,
+            //envMapIntensity: 0,
+            //flatShading: true,
+    };
+
+    let mgg = new mglGeometryGenerator();
+    mgg.makeTree();
+
+    let geomerty = mgg.buildGeometry();
+    //let material = new THREE.MeshPhysicalMaterial({ color: 0xff0000, ...mat, side: THREE.DoubleSide });
+
+            const material = new THREE.ShaderMaterial({
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv; // Передаем UV-координаты в фрагментный шейдер
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                varying vec2 vUv;
+                void main() {
+                    gl_FragColor = vec4(vUv.x, vUv.y, 0.0, 1.0); // Используем UV-координаты как цвет
+                }
+            `,
+            side: THREE.DoubleSide // Отображаем обе стороны
+        });
+
+    let mesh = new THREE.Mesh(geomerty, material);
+    modelConfig.list.push(mesh);
+    scene.add(mesh);
+
+    // Gui
+    let controlGui = gui.addFolder('Control');
+
+    controlGui.add(modelConfig, 'wireframe').onChange((value) => {
+        modelConfig.wireframe = value;
+        updateModels();
+    });
+
+    controlGui.add(modelConfig, 'flatShading').onChange((value) => {
+        modelConfig.flatShading = value;
+        updateModels();
+    });
+
+    controlGui.add(modelConfig, 'clearColor').onChange((value) => {
+        modelConfig.clearColor = value;
+        updateModels();
+    });
+
+    controlGui.add(modelConfig, 'showNormalsRed').onChange((value) => {
+        modelConfig.showNormalsRed = value;
+        updateNormalsModels(1, value);
+    });
+
+    // Lights
+    scene.add( new THREE.HemisphereLight( 0x8d7c7c, 0x494966, 3 ) );
+    mglLights.addShadowedLight(scene, 1, 1, 1, 0xffffff, 3.5 );
+    mglLights.addShadowedLight(scene, 0.5, 1, - 1, 0xffd500, 3 );
+
+    // Camera
+    camera.position.y = 5;
+    camera.position.z = 5;
+
+    // Hide loading screen
+    mglFiles.getScreen().hideScreen();
+}
+
+function updateOneModel(model, type, id){
+    for(const child of model.children){
+        updateOneModel(child, type, id);
+    }
+
+    if(model.material){
+        if(model.material.color)
+        if(modelConfig.clearColor){
+            if(!model.colorSave)
+                model.colorSave = new THREE.Color(model.material.color.getHex());
+
+            model.material.color.setHex(0xffffff);
+        } else {
+            if(model.colorSave)
+                model.material.color = new THREE.Color(model.colorSave.getHex());
+        }
+
+        model.material.wireframe = modelConfig.wireframe;
+        model.material.flatShading = modelConfig.flatShading;
+        model.material.needsUpdate = true;
+    }
+
+    function testNormalHelper(id, testId, color){
+        //if(model.material.color.equals(new THREE.Color(color)) && id == testId){
+            const item = new VertexNormalsHelper(model, 0.5, 0x00ff00, 1);
+            item.mglHelperId = testId;
+            modelConfig.showNormalsList.push(item);
+            scene.add(item);
+        //}
+    }
+
+    if(type == 1 && model.type == "Mesh"){
+        testNormalHelper(id, 1, 0xff0000);
+        //testNormalHelper(id, 2, 0x00000);
+        //testNormalHelper(id, 3, 0xffffff);
+    }
+}
+
+function updateModels(type = 0, id){
+    for(const model of modelConfig.list){
+        updateOneModel(model, type, id);
+    }
+}
+
+function updateNormalsModels(id, value){
+    if(!value){
+        for(let i = modelConfig.showNormalsList.length - 1; i >= 0; i --){
+            const item = modelConfig.showNormalsList[i];
+
+            if(item.mglHelperId == id){
+                scene.remove(item);
+                modelConfig.showNormalsList.splice(i, 1);
+            }
+        }
+        return ;
+    }
+
+    updateModels(1, id);
+}
+
+// [Controls section]
+let moveControl = new mglMoveControl();
+moveControl.initKeyboard();
+
+// [Animate section]
+let lastTime = 0;
+
+function animate(time) {
+    requestAnimationFrame(animate);
+
+    // Stats
+    if(mglBuild.debug)
+        stats.beginAnimate();
+
+    // Calculate the time elapsed since the last frame
+    const deltaTime = (time - lastTime) / 1000;
+    lastTime = time;
+
+    // Move
+    let move = moveControl.getMoveFromCamera(camera, deltaTime);
+    //hero.position.x += move.x;
+    //hero.position.z += move.y;
+
+    // Light
+    //if(lightConfig && lightConfig.lightCurrent){
+    //    lightConfig.lightCurrent.position.copy(hero.position);
+    //}
+
+    // Camera
+    camera.lookAt(0, 0, 0);
+
+    // Render
+    renderer.render(scene, camera);
+
+    // Stats
+    if(mglBuild.debug)
+        stats.endAnimate();
+}
+
+// Let's start the animation
+animate(0);
+
+// [Extern section]
+mglWindowControl.addResizeEvent(camera, renderer);
+
+if(!mglBuild.debug)
+    mglWindowControl.addDisableContextMenu();
+
+</script>

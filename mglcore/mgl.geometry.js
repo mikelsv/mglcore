@@ -685,6 +685,82 @@ export class mglGeometryGenerator{
         this.endModel();
     }
 
+    // Tree Generator
+    makeTree(_options = {}){
+        let options = {
+            treeLimit: 0,
+            ... _options
+        };
+
+        this.beginModel();
+
+        let box = function(vId, fId){
+            const vert = [[0, -1, 0], [-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1], [-1, 1, -1], [1, 1, -1], [1,  1, 1], [-1, 1, 1]];
+            const uvs = [[7, 7], [0, 0], [1, 0], [1, 1], [0, 1], [0, 0], [1, 0], [1, 1], [0, 1]];
+
+            if(vId == 0){
+                return { vert: [0, -1, 0], norm: [0, -1, 0], uv: [.5, .5], id: [1, 2, 3, 4] };
+            } else if(vId < 5){
+                return { vert: vert[vId], norm: [vert[vId][0] * 0.5773502691896258, vert[vId][1] * 0.5773502691896258, vert[vId][2] * 0.5773502691896258], uv: uvs[vId],
+                    id: fId == 0 ? [vId != 4 ? (vId + 1) : 1] : [vId + 4] };
+            }else if(vId < 9){
+                return { vert: vert[vId], norm: [vert[vId][0] * 0.5773502691896258, vert[vId][1] * 0.5773502691896258, vert[vId][2] * 0.5773502691896258], uv: uvs[vId],
+                    id: fId < 5 ? [vId != 8 ? vId + 1 : 5] :
+                    Math.abs(vId - fId) == 1 ? [vId != 8 ? vId + 1 : 5] : 0
+                    //id: fId < 5 ? [fId != 4 ? (fId + 1) : 1] : []
+                    //    id: fId < 5 ? [vId != 5 ? (vId - 1) : 8] : [9]
+                };
+            } else if(vId == 9){
+                return { vert: [0, 1, 0], norm: [0, 1, 0], uv: [.5, .5], id: [] };
+            } else if(vId == undefined){
+                return { verts: 10 };
+            }
+        }
+
+        if(!options.call)
+            options.call = box;
+
+        if(!options.call){
+            console.error("mglGeometryGenerator.makeTree() need options 'call' for generate tree points.");
+            return ;
+        }
+
+        const verts = options.call().verts;
+
+        for(let i = 0; i < verts; i ++){
+            const result = options.call(i);
+            this.addVertNorm(...result.vert, ...result.norm);
+            this.addUv(...result.uv);
+        }
+
+        this.makeThreeIndex(options, undefined, 0, 0);
+        this.endModel();
+    }
+
+    makeThreeIndex(options, vId0, vId1, iteration){
+        const result = options.call(vId1, vId0);
+
+        //console.log("STEP", iteration);
+        //console.log(vId0, vId1, result);
+
+        if(options.treeLimit && iteration >= options.treeLimit)
+            return ;
+
+        for(let i = 0; i < result.id.length; i ++){
+
+            //const next = call(result.id[i]);
+
+            // There are 3 points
+            //for(let j = 0; j < next.id.length; j ++){
+                if(vId0 != undefined){
+                    this.addIndex(vId0, vId1, result.id[i]);
+                    //console.log("index", vId0, vId1, result.id[i]);
+                }
+                this.makeThreeIndex(options, vId1, result.id[i], iteration + 1);
+            //}
+        }
+    }
+
     // Erases
     setErases(erases){
         this.erases = erases;
@@ -815,6 +891,7 @@ export class mglGeometryGenerator{
         this.indices.length = 0;
     }
 };
+
 
 // mglModelGenerator: addGroup, setMaterial, addModel, buildModel.
 export class mglModelGenerator{

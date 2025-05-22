@@ -17,6 +17,8 @@ https://mikelsv.github.io/mglcore/todo/sea_mine.html - Blender and generating a 
 
 https://mikelsv.github.io/mglcore/todo/sea_mine_animate.html - Generating a model and animating it from primitives.
 
+https://mikelsv.github.io/mglcore/todo/parametric_modeling.html - Parametric Modeling. Point Tree Function.
+
 ## Games
 https://mikelsv.github.io/mglcore/piratespath - The Pirate's Way.
 
@@ -125,6 +127,7 @@ animate(0);
 [ ] ToDo: sea_mine animation. Generating a model and animating it from primitives.
 
 [x] (a) New mglGlslCombineTextures for combinate glsl textures.
+[ ] (b) ToDo: Parametric Modeling.
 
 ## /mglcore - need to refactory and more structure logic.
 mgl.build.js - build functions for any game platforms.
