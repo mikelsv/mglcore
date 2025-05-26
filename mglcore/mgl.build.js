@@ -15,8 +15,12 @@ var mglBuild = {
         mglBuild.log("mglBuild.init() for ", this.platform);
     },
 
+    startApp(){
+        mglBuild.log("mglBuild. App started!");
+    },
+
     startGame(){
-        mglBuild.log("mglBuild. Game started!");
+        mglBuild.log("mglBuild. Game started! But, this call is deprecated! Use startApp().");
     },
 
     startLevel(){
@@ -53,5 +57,4 @@ var mglBuild = {
 
 async function mglBuildInit(){
     mglBuild.log("mglBuild.init() ", mglBuild.build, mglBuild.platform);
-    // mglBuild.log("This", "is", "test");
 }

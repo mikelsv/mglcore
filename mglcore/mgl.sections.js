@@ -120,7 +120,7 @@ export class mglApp{
         camera.lookAt(0, 0, 0);
     }
 
-    onAnimateApp(){
+    onAnimateApp(deltaTime){
         // hero.position.set(1, 2, 3);
     }
 
@@ -175,8 +175,8 @@ export class mglApp{
     }
 
     startApp(){
-        mglBuild.log("Start game!", gamer.projectName, gamer.projectVers[0]);
-        mglBuild.startGame();
+        mglBuild.log("Start app!", gamer.projectName, gamer.projectVers[0]);
+        mglBuild.startApp();
 
         this.onStartApp();
 

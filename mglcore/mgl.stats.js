@@ -160,7 +160,7 @@ class mglStatsInfo extends mglStatsWindow{
         this.drawGraph();
     }
 
-    update(e, [calls, tris, lines, points, geoms, texts, shaders]) {
+    update(e, [calls, tris, points, lines, geoms, texts, shaders]) {
         if (this.prevTime === null || this.isCollapsed) {
             this.prevTime = e;
             return;

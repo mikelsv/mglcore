@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <script src="pages.js"></script>
-        <link rel="stylesheet" type="text/css" href="pages.css">
+        <script src="docs.js"></script>
     </head>
     <body>
 
@@ -16,7 +15,6 @@ Create a folder in the root and create your first project with mglcore!
 <p class="desc">
 Create index.html with code:
 
-<pre>
 <code>
 &lt;!DOCTYPE html&gt;
 &lt;html&gt;
@@ -29,16 +27,15 @@ Create index.html with code:
 &lt;script src="../mglcore/mgl.package.js"&gt;&lt;/script&gt;
 &lt;script&gt;mglPackageInit("main.js");&lt;/script&gt;
 </code>
-</pre>
 
 The mglPackageInit("main.js"); function connects the necessary files and the main.js game module. <br>
 You can specify null if you are writing a module in the current html file. Then use the code for the module.
 
-<pre><code>
+<code>
 &lt;script type='module'&gt;
 Your code here
 &lt;/script&gt;
-</code></pre>
+</code>
 </p>
 
 <h2>gamer.js</h2>
@@ -47,7 +44,7 @@ I'll take a little more of your time before writing the game. Let's create a fil
 <br>
 Its code will be:
 
-<pre><code>
+<code>
 // Set your name
 gamer.projectName = "myGame";
 
@@ -75,7 +72,7 @@ gamer.langs = {
         ru: "Загрузка:"
     }
 };
-</code></pre>
+</code>
 
 Gamer stores and operates the player's game data. Such as health, coins, current level and everything else that defines the player's unique features.<br>
 This class is responsible for loading and saving user data.<br>
@@ -92,7 +89,8 @@ gamer.langs stores data for translating text into other languages.<br>
 It's time for adventure! Create a main.js
 <p />
 Its code will be:
-<pre><code>
+
+<code>
 import * as THREE from 'three';
 import {scene, camera, renderer, mglInitSections, mglApp} from 'mglcore/mgl.sections.js';
 
@@ -120,7 +118,7 @@ myApp.onAnimateApp = function(deltaTime){
 // Run
 myApp.runApp();
 
-</code></pre>
+</code>
 
 This is the simplest code imaginable.<p>
 
@@ -134,5 +132,6 @@ Your first game is ready! A rotating cube!
 <p>
 Hmm,... is it a bit small and you expected more?<br>
 No problem, this was just the first step. Keep going and creating!
+
 </body>
 </html>

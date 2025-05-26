@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <link rel="stylesheet" type="text/css" href="../../pages.css">
+        <script src="../../docs.js"></script>
     </head>
     <body>
 
@@ -13,3 +13,12 @@ BoxGeometry is a geometry class for a rectangular cuboid with a given 'width', '
 <a href="https://threejs.org/docs/#api/en/geometries/BoxGeometry">ThreeJs BoxGeometry</a><p>
 
 <iframe id="scene" src="../../scenes/threejs_geometry.html#BoxGeometry"></iframe>
+
+<code class="prettyprint">
+const geometry = new THREE.CapsuleGeometry( 1, 1, 4, 8 );
+const material = new THREE.MeshBasicMaterial( {color: 0x00ff00} );
+const capsule = new THREE.Mesh( geometry, material ); scene.add( capsule );
+</code>
+
+    </body>
+</html>

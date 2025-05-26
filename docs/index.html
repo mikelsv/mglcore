@@ -3,6 +3,27 @@
     <head>
         <title>MyGL Core Docs</title>
 <style>
+:root {
+	color-scheme: light dark;
+
+	--background-color: #fff;
+	--secondary-background-color: #f7f7f7;
+
+	--color-blue: #ff8b00;
+	--text-color: #444;
+	--secondary-text-color: #9e9e9e;
+
+	--font-size: 16px;
+	--line-height: 26px;
+
+	--border-color: #E8E8E8;
+	--border-style: 1px solid var(--border-color);
+	--header-height: 48px;
+	--panel-width: 300px;
+	--panel-padding: 16px;
+	--icon-size: 20px;
+}
+
 #viewer,
 iframe {
 	position: absolute;
@@ -12,9 +33,6 @@ iframe {
 	width: 100%;
 	height: 100%;
 	overflow: auto;
-
-
-            border: 1px solid #ccc; /* Граница фрейма */
 }
 
 iframe#viewer {
@@ -38,13 +56,89 @@ position: fixed;
   transition: 0s 0s height;
 }
 
+#header h1 {
+  padding-left: var(--panel-padding);
+  flex: 1;
+  display: flex;
+  align-items: center;
+  color: var(--color-blue);
+}
+
+h1 {
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 500;
+}
+
+h2 {
+  padding: 0;
+  margin: 16px 0;
+  font-size: calc(var(--font-size) - 1px);
+  line-height: var(--line-height);
+  font-weight: 500;
+  color: var(--color-blue);
+}
+
+a {
+  text-decoration: none;
+}
+
+#menu #content ul {
+  list-style-type: none;
+}
+
+#menu #content h3 {
+  color: var(--text-color);
+  font-weight: 900;
+}
+
+#menu #content a {
+  position: relative;
+  color: var(--text-color);
+}
+
+#menu #content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 var(--panel-padding) var(--panel-padding) var(--panel-padding);
+}
+
+#menu #content ul {
+    list-style-type: none;
+    padding: 0px;
+    margin: 0px 0 20px 0;
+}
+#menu #content ul li {
+    margin: 1px 0;
+}
+
+#menu #content a:hover,
+#menu #content a:hover .spacer,
+#menu #content .selected {
+    color: var(--color-blue);
+}
+
+#menu #content .selected {
+    text-decoration: underline;
+}
+
+h3 {
+  margin: 0;
+  font-weight: 500;
+  font-size: calc(var(--font-size) - 1px);
+  line-height: var(--line-height);
+  color: var(--secondary-text-color);
+}
+
 </style>
 
     </head>
     <body>
         <div id="menu">
-            <div class="header">
-                <h1>MyGL Core</h1>
+            <div id="header">
+                <h1><a href="https://github.com/mikelsv/mglcore">MyGL Core</a></h1>
             </div>
             <div id="content" calss="content">
             </div>
@@ -56,7 +150,7 @@ position: fixed;
 
 <script>
 let menu = {
-    About: {
+    MyGL: {
         list: [
             { name: 'About', url: 'about.html' },
             { name: 'Installation', url: 'install.html' },
@@ -67,13 +161,31 @@ let menu = {
     ThreeJs: {
         list: [
             {name: 'BoxGeometry', url: 'threejs/geometries/BoxGeometry.html' },
+            {name: 'CapsuleGeometry', url: 'threejs/geometries/CapsuleGeometry.html' },
             {name: 'SphereGeometry', url: 'threejs/geometries/SphereGeometry.html' },
         ]
     }
 };
 
+
+function replaceIframe(name, url){
+    const oldIframe = document.querySelector('iframe');
+    let iframe = oldIframe.cloneNode();
+
+    iframe.style.display = 'none';
+    iframe.src = url;
+
+    iframe.onload = function(){
+    	iframe.style.display = 'unset';
+	};
+
+    document.body.replaceChild(iframe, oldIframe);
+    document.title = name + 'MyGL docs';
+}
+
 function mglMakeMenu(menu){
     const contentDiv = document.getElementById('content');
+    const selectedPage = window.location.hash.substring(1);
 
     for(const group in menu){
         if (menu.hasOwnProperty(group)){
@@ -81,7 +193,7 @@ function mglMakeMenu(menu){
             const groupDiv = document.createElement('div');
             groupDiv.className = 'menu-group';
 
-            const groupTitle = document.createElement('h2');
+            const groupTitle = document.createElement('h3');
             groupTitle.textContent = group;
             groupDiv.appendChild(groupTitle);
 
@@ -96,31 +208,28 @@ function mglMakeMenu(menu){
                 link.textContent = item.name;
                 link.setAttribute('target', 'viewer');
 
+                if(selectedPage == item.url){
+                    link.classList.add('selected');
+                    replaceIframe(item.name, item.url);
+                }
+
                 link.addEventListener('click', function(event){
-				    if(event.button !== 0 || event.ctrlKey || event.altKey || event.metaKey)
+                    if (event.button !== 0 || event.ctrlKey || event.altKey || event.metaKey)
                         return;
 
                     let iframe = document.getElementsByName('viewer');
 
                     const url = this.getAttribute('href');
-                    iframe.src = url; //link.href;
-                    //console.log(iframe);
+                    iframe.src = url;
 
-				    window.location.hash = item.url;
+                    window.location.hash = item.url;
 
-                    //event.preventDefault();
+                    content.querySelectorAll( 'a' ).forEach( function (item){
+					    item.classList.remove( 'selected' );
+    				});
 
-				    //panel.classList.remove('open');
-
-/*
-				content.querySelectorAll( 'a' ).forEach( function ( item ) {
-
-					item.classList.remove( 'selected' );
-
-				} );
-*/
-				    link.classList.add('selected');
-			    });
+                    link.classList.add('selected');
+                });
 
                 listItem.appendChild(link);
                 list.appendChild(listItem);
@@ -133,5 +242,9 @@ function mglMakeMenu(menu){
 }
 
 mglMakeMenu(menu);
+
+// window.onpopstate = function(){
+//     console.log(123456789);
+// };
 
 </script>
