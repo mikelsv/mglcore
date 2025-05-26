@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="pages.js"></script>
+        <link rel="stylesheet" type="text/css" href="pages.css">
+    </head>
+    <body>
+
+        <h1>MyGL core</h1>
+
+<p class="desc">
+Hi! I started writing a lot of JavaScript and Threejs functions. So I had a lot of different code that needed to be synchronized somehow. For this, I created mglcore - a platform for WebGL and JavaScript code. Similar to my msvcore for C++.
+<p>
+An important part of my library function is code structuring. At first, I started with a bunch of code. It was everywhere. Johnny, it's in the trees!
+<p>
+But already in version 0.3, I switched to section logic - code blocks with a clear sequence of execution.
+<p>
+Now, starting with version 0.8, I created a mglApp class, hiding all the complex logic in it. Now it's enough to create an instance of the class let myApp = new mglApp(); Assign the function myApp.onStartApp() to run the user code. And write myApp.onAnimateApp() for animation. Then run the application myApp.runApp(); As simple as it can be!
+<p>
+Hmm, could it be simpler? Maybe I'll think about how to do this in the next versions.
+</p>
+    </body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="pages.js"></script>
+        <link rel="stylesheet" type="text/css" href="pages.css">
+    </head>
+    <body>
+
+<h1>Installation</h1>
+<p class="desc">
+Just git clone https://github.com/mikelsv/mglcore.git<br>
+Create a folder in the root and create your first project with mglcore!
+</p>
+
+<h2>index.html</h2>
+<p class="desc">
+Create index.html with code:
+
+<pre>
+<code>
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+    &lt;head&gt;
+        &lt;title&gt;My Game&lt;/title&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+    &lt;/body&gt;
+&lt;/html&gt;
+&lt;script src="../mglcore/mgl.package.js"&gt;&lt;/script&gt;
+&lt;script&gt;mglPackageInit("main.js");&lt;/script&gt;
+</code>
+</pre>
+
+The mglPackageInit("main.js"); function connects the necessary files and the main.js game module. <br>
+You can specify null if you are writing a module in the current html file. Then use the code for the module.
+
+<pre><code>
+&lt;script type='module'&gt;
+Your code here
+&lt;/script&gt;
+</code></pre>
+</p>
+
+<h2>gamer.js</h2>
+<p class="desc">
+I'll take a little more of your time before writing the game. Let's create a file gamer.js.
+<br>
+Its code will be:
+
+<pre><code>
+// Set your name
+gamer.projectName = "myGame";
+
+// And versions
+gamer.projectVers = [ // New to up
+    ["0.1", "25.05.2025 19:04", "Make project and main code"],
+];
+
+// Base
+gamer.base = {
+    lang: "en",
+
+    // Initial new player data
+    level: 1,
+    coins: 0,
+    title: 'Noob!'
+
+    update(){}
+};
+
+// Translations
+gamer.langs = {
+    LOADING_MESSAGE: {
+        en: "Loading:",
+        ru: "Загрузка:"
+    }
+};
+</code></pre>
+
+Gamer stores and operates the player's game data. Such as health, coins, current level and everything else that defines the player's unique features.<br>
+This class is responsible for loading and saving user data.<br>
+<p />
+Here in projectName we specify the name of the project.<br>
+projectVers contains the version number, date and comment.<br>
+<p />
+In gamer.base the initial values ​​for the player are stored. They can change during the game.<br>
+
+gamer.langs stores data for translating text into other languages.<br>
+</p>
+
+<h1>main.js</h1>
+It's time for adventure! Create a main.js
+<p />
+Its code will be:
+<pre><code>
+import * as THREE from 'three';
+import {scene, camera, renderer, mglInitSections, mglApp} from 'mglcore/mgl.sections.js';
+
+// App
+let myApp = new mglApp();
+
+// Start
+myApp.onStartApp = function(){
+    // Make first cube
+    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.MeshBasicMaterial({ color: 0xfff000 });
+    this.mesh = new THREE.Mesh(geometry, material);
+    scene.add(this.mesh);
+
+    // Don't forget your camera!
+    camera.position.set(0, 5, 5);
+    camera.lookAt(0, 0, 0);
+}
+
+myApp.onAnimateApp = function(deltaTime){
+    this.mesh.rotation.x += 0.005;
+    this.mesh.rotation.y += 0.005;
+}
+
+// Run
+myApp.runApp();
+
+</code></pre>
+
+This is the simplest code imaginable.<p>
+
+1. Create a new mglApp instance.<br>
+2. Specify the game ready function onStartApp() with the cube code.<br>
+3. Rotate the cube in the animation function onAnimateApp().<br>
+<p>
+And of course, don't forget to call runApp() to launch our application.
+<p>
+Your first game is ready! A rotating cube!
+<p>
+Hmm,... is it a bit small and you expected more?<br>
+No problem, this was just the first step. Keep going and creating!
+</body>
+</html>

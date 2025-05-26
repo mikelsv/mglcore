@@ -1,14 +1,93 @@
+class mglStatsWindow{
+    constructor(name, fontColor, bgColor, updateTime){
+        this.name = name;
+        this.fontColor = fontColor;
+        this.bgColor = bgColor;
+        this.updateTime = updateTime;
+    }
+
+    initGraph(){
+        // Container
+        this.dom = document.createElement("div");
+        this.dom.style.position = "relative";
+        this.dom.style.display = "inline-block";
+
+        // Canvas
+        this.canvas = document.createElement("canvas");
+        this.canvas.width = this.WIDTH;
+        this.canvas.height = this.HEIGHT;
+        this.canvas.style.cssText = `width:${this.WIDTH / this.PR}px;height:${this.HEIGHT / this.PR}px`;
+        this.context = this.canvas.getContext("2d");
+
+        // Close button
+        this.closeButton = document.createElement("span");
+        this.closeButton.innerHTML = "&times;";
+        this.closeButton.style.position = "absolute";
+        this.closeButton.style.top = "-2px";
+        this.closeButton.style.right = "5px";
+        this.closeButton.style.cursor = "pointer";
+        this.closeButton.style.color = this.fontColor;
+        this.closeButton.style.fontSize = "16px";
+
+        this.closeButton.addEventListener("click", () => this.toggleWindow());
+
+        this.isCollapsed = false;
+
+        // Append
+        this.dom.appendChild(this.canvas);
+        this.dom.appendChild(this.closeButton);
+    }
+
+    drawGraph(){
+        this.context.font = "bold " + 10 * this.PR + "px monospace";
+        this.context.textBaseline = "top";
+        this.context.fillStyle = this.bgColor;
+        this.context.fillRect(0, 0, this.WIDTH, this.HEIGHT);
+        this.context.fillStyle = this.fontColor;
+        this.context.fillText(this.name, this.TEXT_X, this.TEXT_Y + 1 * this.PR);
+        this.context.fillRect(this.GRAPH_X, this.GRAPH_Y, this.GRAPH_WIDTH, this.GRAPH_HEIGHT);
+        this.context.fillStyle = this.bgColor;
+        this.context.globalAlpha = 0.9;
+        this.context.fillRect(this.GRAPH_X, this.GRAPH_Y, this.GRAPH_WIDTH, this.GRAPH_HEIGHT);
+    }
+
+    toggleWindow(){
+        if (this.isCollapsed){
+            // Maximize the window
+            this.canvas.width = this.WIDTH;
+            this.canvas.height = this.HEIGHT;
+            this.canvas.style.width = this.WIDTH + "px";
+            this.canvas.style.height = this.HEIGHT + "px";
+            this.drawGraph(); // Redraw the contents
+            this.closeButton.innerHTML = "&times;"; // Cross
+            this.isCollapsed = false;
+        } else {
+            // Minimize the window
+            this.dom.width = 20;
+            console.log(this.dom);
+            this.canvas.width = 17 * this.PR; // Decrease the canvas width
+            this.canvas.height = 20 * this.PR; // Decrease the canvas height
+            this.canvas.style.width = this.canvas.width + "px"; // Set the style
+            this.canvas.style.height = this.canvas.height + "px"; // Set the style
+            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height); // Clear the canvas
+            this.context.fillStyle = this.bg; // Set the background color
+            this.context.fillRect(0, 0, this.canvas.width, this.canvas.height); // Draw the background
+            this.closeButton.innerHTML = "+"; // Change the cross to a plus
+            this.isCollapsed = true;
+        }
+    }
+};
+
 // Extended stats
-class mglStatsCpu {
-    constructor(e, t, n, i, r) {
-        this.name = e;
-        this.fg = t;
-        this.bg = n;
-        this.updateTime = i;
+class mglStatsGraph extends mglStatsWindow{
+    constructor(name, fontColor, bgColor, updateTime, r){
+        super(name, fontColor, bgColor, updateTime);
         this.getAverage = r;
         this.prevTime = null;
         this.sum = 0;
         this.count = 0;
+
+        // Window
         this.PR = Math.round(window.devicePixelRatio || 1);
         this.WIDTH = 90 * this.PR;
         this.HEIGHT = 48 * this.PR;
@@ -18,82 +97,136 @@ class mglStatsCpu {
         this.GRAPH_Y = 15 * this.PR;
         this.GRAPH_WIDTH = 84 * this.PR;
         this.GRAPH_HEIGHT = 30 * this.PR;
-        this.dom = document.createElement("canvas");
-        this.dom.width = this.WIDTH;
-        this.dom.height = this.HEIGHT;
-        this.dom.style.cssText = "width:90px;height:48px";
-        this.context = this.dom.getContext("2d");
-        this.context.font = "bold " + 10 * this.PR + "px monospace";
-        this.context.textBaseline = "top";
-        this.context.fillStyle = n;
-        this.context.fillRect(0, 0, this.WIDTH, this.HEIGHT);
-        this.context.fillStyle = t;
-        this.context.fillText(e, this.TEXT_X, this.TEXT_Y + 1 * this.PR);
-        this.context.fillRect(this.GRAPH_X, this.GRAPH_Y, this.GRAPH_WIDTH, this.GRAPH_HEIGHT);
-        this.context.fillStyle = n;
-        this.context.globalAlpha = .9;
-        this.context.fillRect(this.GRAPH_X, this.GRAPH_Y, this.GRAPH_WIDTH, this.GRAPH_HEIGHT);
+
+        // Init and draw
+        this.initGraph();
+        this.drawGraph();
     }
 
-    update(e, t, n, i) {
-        if (this.prevTime === null) {
-            this.prevTime = e;
+    update(nowTime, value, n, i) {
+        if (this.prevTime === null || this.isCollapsed){
+            this.prevTime = nowTime;
             return
         }
 
-        this.sum += t;
+        this.sum += value;
         this.count ++;
 
-        if(!(e < this.prevTime + this.updateTime)){
-            t = this.getAverage ? this.sum / this.count : this.sum;
-            this.prevTime += this.updateTime * Math.floor((e - this.prevTime) / this.updateTime);
+        if(!(nowTime < this.prevTime + this.updateTime)){
+            value = this.getAverage ? this.sum / this.count : this.sum;
+            this.prevTime += this.updateTime * Math.floor((nowTime - this.prevTime) / this.updateTime);
             this.count = 0;
             this.sum = 0;
-            this.context.fillStyle = this.bg;
+            this.context.fillStyle = this.bgColor;
             this.context.globalAlpha = 1;
             this.context.fillRect(0, 0, this.WIDTH, this.GRAPH_Y);
-            this.context.fillStyle = this.fg;
-            this.context.fillText(`${t.toFixed(i)} ${this.name}`, this.TEXT_X, this.TEXT_Y + 1 * this.PR);
-            this.context.drawImage(this.dom, this.GRAPH_X + this.PR, this.GRAPH_Y, this.GRAPH_WIDTH - this.PR, this.GRAPH_HEIGHT, this.GRAPH_X, this.GRAPH_Y, this.GRAPH_WIDTH - this.PR, this.GRAPH_HEIGHT);
+            this.context.fillStyle = this.fontColor;
+            this.context.fillText(`${value.toFixed(i)} ${this.name}`, this.TEXT_X, this.TEXT_Y + 1 * this.PR);
+            this.context.drawImage(this.canvas, this.GRAPH_X + this.PR, this.GRAPH_Y, this.GRAPH_WIDTH - this.PR, this.GRAPH_HEIGHT, this.GRAPH_X, this.GRAPH_Y, this.GRAPH_WIDTH - this.PR, this.GRAPH_HEIGHT);
             this.context.fillRect(this.GRAPH_X + this.GRAPH_WIDTH - this.PR, this.GRAPH_Y, this.PR, this.GRAPH_HEIGHT);
-            this.context.fillStyle = this.bg;
+            this.context.fillStyle = this.bgColor;
             this.context.globalAlpha = .9;
-            this.context.fillRect(this.GRAPH_X + this.GRAPH_WIDTH - this.PR, this.GRAPH_Y, this.PR, Math.round((1 - t / n) * this.GRAPH_HEIGHT));
+            this.context.fillRect(this.GRAPH_X + this.GRAPH_WIDTH - this.PR, this.GRAPH_Y, this.PR, Math.round((1 - value / n) * this.GRAPH_HEIGHT));
         }
     }
 }
 
-class mglStatsInfo {
-    constructor(e, t, n, i, r) {
-        this.name = e, this.properties = t, this.fg = n, this.bg = i, this.updateTime = r, this.prevTime = null, this.sumTriangles = 0, this.sumCalls = 0, this.count = 0, this.PR = Math.round(window.devicePixelRatio || 1), this.WIDTH = 126 * this.PR, this.HEIGHT = 48 * this.PR, this.TEXT_X = 3 * this.PR, this.TEXT_Y = 2 * this.PR, this.GRAPH_X = 3 * this.PR, this.GRAPH_Y = 15 * this.PR, this.GRAPH_WIDTH = this.WIDTH - 6 * this.PR, this.GRAPH_HEIGHT = 30 * this.PR, this.PADDING_V = 4.3 * this.PR, this.PADDING_H = 1 * this.PR, this.TEXT_SPACE = 14 * this.PR, this.COLUMN_SPACE = this.GRAPH_WIDTH / 2, this.dom = document.createElement("canvas"), this.dom.width = this.WIDTH, this.dom.height = this.HEIGHT, this.dom.style.cssText = `width:${this.WIDTH / this.PR}px;height:${this.HEIGHT / this.PR}px`, this.context = this.dom.getContext("2d"), this.context.font = "bold " + 10 * this.PR + "px monospace", this.context.textBaseline = "top", this.context.fillStyle = i, this.context.fillRect(0, 0, this.WIDTH, this.HEIGHT), this.context.fillStyle = n, this.context.fillText(this.name, this.TEXT_X, this.TEXT_Y + 1 * this.PR), this.context.fillRect(this.GRAPH_X, this.GRAPH_Y, this.GRAPH_WIDTH, this.GRAPH_HEIGHT), this.context.fillStyle = i, this.context.globalAlpha = .9, this.context.fillRect(this.GRAPH_X, this.GRAPH_Y, this.GRAPH_WIDTH, this.GRAPH_HEIGHT)
+class mglStatsInfo extends mglStatsWindow{
+    constructor(name, prop, fontColor, bgColor, updateTime){
+        super(name, fontColor, bgColor, updateTime);
+
+        this.properties = prop;
+        this.prevTime = null;
+        this.sumTriangles = 0;
+        this.sumCalls = 0;
+        this.count = 0;
+
+        this.PR = Math.round(window.devicePixelRatio || 1);
+        this.WIDTH = 126 * this.PR;
+        this.HEIGHT = 48 * this.PR;
+        this.TEXT_X = 3 * this.PR;
+        this.TEXT_Y = 2 * this.PR;
+        this.GRAPH_X = 3 * this.PR;
+        this.GRAPH_Y = 15 * this.PR;
+        this.GRAPH_WIDTH = this.WIDTH - 6 * this.PR;
+        this.GRAPH_HEIGHT = 30 * this.PR;
+        this.PADDING_V = 4.3 * this.PR;
+        this.PADDING_H = 1 * this.PR;
+        this.TEXT_SPACE = 14 * this.PR;
+        this.COLUMN_SPACE = this.GRAPH_WIDTH / 2;
+
+        // Init and draw
+        this.initGraph();
+        this.drawGraph();
     }
 
-    update(e, [t, n, i, r]){
-        if(this.prevTime === null){
+    update(e, [calls, tris, lines, points, geoms, texts, shaders]) {
+        if (this.prevTime === null || this.isCollapsed) {
             this.prevTime = e;
             return;
         }
 
-        if(this.sumTriangles += n, this.sumCalls += t, this.count++, e < this.prevTime + this.updateTime)
+        if(this.sumTriangles += tris, this.sumCalls += calls, this.count++, e < this.prevTime + this.updateTime){
             return;
-
-        t = Math.round(this.sumCalls / this.count), n = Math.round(this.sumTriangles / this.count), this.prevTime += this.updateTime * Math.floor((e - this.prevTime) / this.updateTime), this.count = 0, this.sumCalls = 0, this.sumTriangles = 0;
-        const a = [`Calls ${this._formatNumber(t)}`, `Tris ${this._formatNumber(n)}`, `Lines ${this._formatNumber(r)}`, `Points ${this._formatNumber(i)}`];
-
-        let o = 0;
-        for (let c = 0; c < a.length / 2; c++)
-            o = Math.max((a[c].length + a[c + 2].length) * 8, o);
-
-        this.context.clearRect(0, 0, this.WIDTH, this.HEIGHT), this.WIDTH = o * this.PR, this.GRAPH_WIDTH = this.WIDTH - 6 * this.PR, this.COLUMN_SPACE = this.GRAPH_WIDTH / 2, this.dom.width = this.WIDTH, this.dom.height = this.HEIGHT, this.dom.style.cssText = `width:${this.WIDTH / this.PR}px;height:${this.HEIGHT / this.PR}px`, this.context.font = "bold " + 10 * this.PR + "px monospace", this.context.textBaseline = "top", this.context.fillStyle = this.bg, this.context.globalAlpha = 1, this.context.fillRect(0, 0, this.WIDTH, this.HEIGHT), this.context.fillStyle = this.fg, this.context.fillText(this.name, this.TEXT_X, this.TEXT_Y + 1 * this.PR), this.context.fillRect(this.GRAPH_X, this.GRAPH_Y, this.GRAPH_WIDTH, this.GRAPH_HEIGHT), this.context.fillStyle = this.bg, this.context.globalAlpha = .9, this.context.fillRect(this.GRAPH_X, this.GRAPH_Y, this.GRAPH_WIDTH, this.GRAPH_HEIGHT), this.context.fillStyle = this.fg;
-        const l = Math.ceil(a.length / 2);
-
-        for (let c = 0; c < a.length; c++) {
-            const h = Math.floor(c / l),
-                u = c % l;
-            this.context.fillText(a[c], this.GRAPH_X + this.PADDING_H + this.COLUMN_SPACE * h, this.GRAPH_Y + this.TEXT_SPACE * u + this.PADDING_V)
         }
 
-        this.context.fillStyle = this.bg, this.context.globalAlpha = .9, this.context.fillRect(this.GRAPH_X + this.GRAPH_WIDTH - this.PR, this.GRAPH_Y, this.PR, 0 * this.GRAPH_HEIGHT)
+        calls = Math.round(this.sumCalls / this.count);
+        tris = Math.round(this.sumTriangles / this.count);
+        this.prevTime += this.updateTime * Math.floor((e - this.prevTime) / this.updateTime);
+        this.count = 0;
+        this.sumCalls = 0;
+        this.sumTriangles = 0;
+
+        const a = [
+            `Calls ${this._formatNumber(calls)}`,
+            `Tris ${this._formatNumber(tris)}`,
+            `Lines ${this._formatNumber(lines)}`,
+            `Points ${this._formatNumber(points)}`,
+            `Geoms ${this._formatNumber(geoms)}`,
+            `Texts ${this._formatNumber(texts)}`,
+            `Shaders ${this._formatNumber(shaders)}`
+        ];
+
+        // Length
+        let len = [20, 20];
+        for (let c = 0; c < a.length; c++){
+            len[c % 2] += a[c].length * 6;
+        }
+
+        this.context.clearRect(0, 0, this.WIDTH, this.HEIGHT);
+        this.WIDTH = Math.max(len[0], len[1]) * this.PR;
+        this.GRAPH_WIDTH = this.WIDTH - 6 * this.PR;
+        this.COLUMN_SPACE = this.GRAPH_WIDTH / 3;
+        this.canvas.width = this.WIDTH;
+        this.canvas.height = this.HEIGHT;
+        this.canvas.style.cssText = `width:${this.WIDTH / this.PR}px;height:${this.HEIGHT / this.PR}px`;
+
+        this.context.font = "bold " + 10 * this.PR + "px monospace";
+        this.context.textBaseline = "top";
+        this.context.fillStyle = this.bgColor;
+        this.context.globalAlpha = 1;
+        this.context.fillRect(0, 0, this.WIDTH, this.HEIGHT);
+        this.context.fillStyle = this.fontColor;
+        this.context.fillText(this.name, this.TEXT_X, this.TEXT_Y + 1 * this.PR);
+        this.context.fillRect(this.GRAPH_X, this.GRAPH_Y, this.GRAPH_WIDTH, this.GRAPH_HEIGHT);
+        this.context.fillStyle = this.bgColor;
+        this.context.globalAlpha = 0.9;
+        this.context.fillRect(this.GRAPH_X, this.GRAPH_Y, this.GRAPH_WIDTH, this.GRAPH_HEIGHT);
+        this.context.fillStyle = this.fontColor;
+
+        const l = Math.ceil(a.length / 3);
+        len = [0, 0];
+        for (let c = 0; c < a.length; c++) {
+            //const h = Math.floor(c / l);
+            //const u = c % l;
+            const u = (c % 2);
+            this.context.fillText(a[c], this.GRAPH_X + this.PADDING_H + len[c % 2], this.GRAPH_Y + this.TEXT_SPACE * u + this.PADDING_V);
+            len[c % 2] += a[c].length * 6.5 * this.PR;
+        }
+
+        this.context.fillStyle = this.bgColor;
+        this.context.globalAlpha = 0.9;
+        this.context.fillRect(this.GRAPH_X + this.GRAPH_WIDTH - this.PR, this.GRAPH_Y, this.PR, 0 * this.GRAPH_HEIGHT);
     }
 
     _formatNumber(e) {
@@ -116,16 +249,20 @@ export class mglStats{
             n.preventDefault();
         };
 
+        // Panels
         this.renderer = renderer;
-        this.fpsPanel = this.addPanel(new mglStatsCpu("FPS", "#0ff", "#002", 1e3, !1));
-        this.cpuPanel = this.addPanel(new mglStatsCpu("ms CPU", "#0f0", "#020", 100, !0));
+        this.fpsPanel = this.addPanel(new mglStatsGraph("FPS", "#0ff", "#002", 1e3, !1));
+        this.cpuPanel = this.addPanel(new mglStatsGraph("ms CPU", "#0f0", "#020", 100, !0));
+
+        if(self.performance && self.performance.memory)
+		    this.memPanel = this.addPanel(new mglStatsGraph('MB', '#f08', '#201', 1000));
 
         if(renderer){
             this.gl = renderer.getContext('webgl2');
             this.ext = this.gl ? this.gl.getExtension("EXT_disjoint_timer_query") : null;
 
             if(this.ext)
-                this.gpuPanel = this.addPanel(new mglStatsCpu("ms GPU", "#ff0", "#220", 100, !0));
+                this.gpuPanel = this.addPanel(new mglStatsGraph("ms GPU", "#ff0", "#220", 100, !0));
         }
 
         this.infoPanel = this.addPanel(new mglStatsInfo("INFO", ["Calls", "Triangles"], "#fff", "#022", 100));
@@ -134,9 +271,6 @@ export class mglStats{
             this.switchMinimal(!this._minimal);
             event.preventDefault();
         }, !1);
-
-        //console.log("GPU", this.gl, this.ext, this.gpuPanel);
-        //console.log(this.gl.getSupportedExtensions());
 
         this.switchMinimal(0);
         this.switchOrientation(0);
@@ -237,13 +371,27 @@ export class mglStats{
 
     // Update
     update(){
-        this.cpuPanel.update(this.endTime,  this.endTime - this.beginTime, 33, 2);
+        this.cpuPanel.update(this.endTime,  this.endTime - this.beginTime, 33, 3);
         this.fpsPanel.update(this.endTime, 1, 144, 0);
 
+        if(this.memPanel){
+            var memory = performance.memory;
+            this.memPanel.update(this.endTime, memory.usedJSHeapSize / 1048576, memory.jsHeapSizeLimit / 1048576, 0);
+        }
+
         if(this.gpuPanel)
-            this.gpuPanel.update(this.endTime, this.getQueriesTime(), 33, 2);
+            this.gpuPanel.update(this.endTime, this.getQueriesTime(), 33, 3);
 
         if(this.infoPanel)
-            this.infoPanel.update(this.endTime, [this.renderer.info.render.calls, this.renderer.info.render.triangles, this.renderer.info.render.points, this.renderer.info.render.lines])
+            this.infoPanel.update(this.endTime, [
+                this.renderer.info.render.calls,
+                this.renderer.info.render.triangles,
+                this.renderer.info.render.points,
+                this.renderer.info.render.lines,
+                this.renderer.info.memory.geometries,
+                this.renderer.info.memory.textures,
+                this.renderer.info.programs.length
+            ]);
+
     }
 }

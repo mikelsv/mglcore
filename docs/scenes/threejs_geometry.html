@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>ThreeJs Geometry</title>
+    <style>
+        #newWindow {
+            display: block;
+            position: absolute;
+            bottom: 0.3em;
+            left: 7.5em;
+            color: #fff;
+            z-index: 1;
+        }
+    </style>
+    </head>
+    <body>
+        <a id='newWindow' href='/docs/scenes/threejs_geometry.html' target='_blank'>Open in New Window</a>
+    </body>
+</html>
+<script src="../../mglcore/mgl.package.js"></script><script>mglPackage.mglLibPath = '../../'; mglPackageInit(null);</script>
+
+<script type='module'>
+import * as THREE from 'three';
+import {ParametricGeometry} from 'three/addons/geometries/ParametricGeometry.js';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+
+import {mglLights} from 'mglcore/mgl.threejs.js';
+import {scene, camera, renderer, mglInitSections, mglApp} from 'mglcore/mgl.sections.js';
+import {mglGlslTextures, mglGlslMainExsamples, mglGlslCombineTextures, mglGlslOceanWaves} from 'mglcore/mgl.texture.js';
+
+import GUI from 'lil-gui';
+
+// App
+let myApp = new mglApp();
+let gui = new GUI();
+
+// Material
+let materialConfig = {
+    color: 0x156289,
+    wireframe: true,
+    fire: false,
+    ocean: false,
+    shader: "none",
+    shaderList: [ "none", ... mglGlslMainExsamples.getNamesList()],
+    shaderHeight: false,
+    autoRotate: true,
+    geometryData: undefined
+};
+
+const twoPi = Math.PI * 2;
+
+// Geometries
+let geometries = {
+    BoxGeometry: function ( mesh ) {
+        const data = {
+            width: 15,
+            height: 15,
+            depth: 15,
+            widthSegments: 1,
+            heightSegments: 1,
+            depthSegments: 1
+        };
+
+        function generateGeometry(){
+            updateGroupGeometry( mesh,
+                new THREE.BoxGeometry(
+                    data.width, data.height, data.depth, data.widthSegments, data.heightSegments, data.depthSegments
+                ), generateGeometry, data
+            );
+        }
+
+        const folder = gui.addFolder( 'THREE.BoxGeometry' );
+        folder.add( data, 'width', 1, 30 ).onChange( generateGeometry );
+        folder.add( data, 'height', 1, 30 ).onChange( generateGeometry );
+        folder.add( data, 'depth', 1, 30 ).onChange( generateGeometry );
+        folder.add( data, 'widthSegments', 1, 100 ).step( 1 ).onChange( generateGeometry );
+        folder.add( data, 'heightSegments', 1, 100 ).step( 1 ).onChange( generateGeometry );
+        folder.add( data, 'depthSegments', 1, 100 ).step( 1 ).onChange( generateGeometry );
+
+        generateGeometry();
+    },
+
+    SphereGeometry: function ( mesh ) {
+        const data = {
+            radius: 15,
+            widthSegments: 32,
+            heightSegments: 16,
+            phiStart: 0,
+            phiLength: twoPi,
+            thetaStart: 0,
+            thetaLength: Math.PI
+        };
+
+        function generateGeometry(){
+            data.width = data.radius;
+            data.height = data.radius;
+            data.depth = data.radius;
+
+            updateGroupGeometry( mesh,
+                new THREE.SphereGeometry(
+                    data.radius, data.widthSegments, data.heightSegments, data.phiStart, data.phiLength, data.thetaStart, data.thetaLength
+                ), generateGeometry, data
+            );
+
+        }
+
+        const folder = gui.addFolder( 'THREE.SphereGeometry' );
+
+        folder.add( data, 'radius', 1, 30 ).onChange( generateGeometry );
+        folder.add( data, 'widthSegments', 3, 64 ).step( 1 ).onChange( generateGeometry );
+        folder.add( data, 'heightSegments', 2, 32 ).step( 1 ).onChange( generateGeometry );
+        folder.add( data, 'phiStart', 0, twoPi ).onChange( generateGeometry );
+        folder.add( data, 'phiLength', 0, twoPi ).onChange( generateGeometry );
+        folder.add( data, 'thetaStart', 0, twoPi ).onChange( generateGeometry );
+        folder.add( data, 'thetaLength', 0, twoPi ).onChange( generateGeometry );
+
+        generateGeometry();
+
+    },
+
+};
+
+function updateGroupGeometry(mesh, geometry, call, data){
+    materialConfig.generateGeometry = call;
+    materialConfig.geometryData = data;
+
+    const isWireframe = (materialConfig.wireframe && !materialConfig.ocean) ? 1 : 0;
+
+    // Clean
+    mesh.children[0].geometry.dispose();
+    mesh.children[1].geometry.dispose();
+
+    // Geometry
+    if(isWireframe)
+        mesh.children[0].geometry = new THREE.WireframeGeometry(geometry);
+    else
+        mesh.children[0].geometry = new THREE.BoxGeometry(0.001, 0.001);
+    mesh.children[1].geometry = geometry;
+
+    // Material
+    mesh.children[0].material.dispose();
+    mesh.children[1].material.dispose();
+
+    // Wirefarame
+    if(isWireframe)
+        mesh.children[0].material = new THREE.LineBasicMaterial( { color: 0xffffff, transparent: true, opacity: .5, visible: isWireframe } );
+
+    // Fire
+    if(materialConfig.fire){
+        mesh.children[1].material = new mglGlslTextures().matGeometryToonFire();
+        mesh.update = function(deltaTime){
+            mesh.children[1].material.update(deltaTime);
+        }
+    // Ocean
+    } else if(materialConfig.ocean){
+        let ocean = new mglGlslOceanWaves();
+        let options = {
+            iQuality: 4,
+            pSize: [data.width, data.height, data.depth],
+            pScale: [1, .5, 1],
+            offset: 0.042,
+            contrast: 1.739,
+            brightness: 1.535,
+         };
+
+        options.waterColor = new THREE.Color(materialConfig.color).toArray();
+
+        if(materialConfig.shader && materialConfig.shader != "none")
+            options.fragMain = mglGlslMainExsamples.getShader(materialConfig.shader);
+
+        mesh.children[1].material = ocean.buildShader(options);
+        mesh.update = function(deltaTime){
+            mesh.children[1].material.update(deltaTime);
+        }
+    // Shaders
+    } else if(materialConfig.shader && materialConfig.shader != "none"){
+        const glsl = new mglGlslCombineTextures().addMainTemplate(materialConfig.shader);
+
+        if(materialConfig.shaderHeight)
+            glsl.addheightDiscard({ height: data.height });
+
+        mesh.children[1].material = glsl.buildTexture();
+        mesh.update = function(deltaTime){
+            mesh.children[1].material.update(getPerfValue(5), 0);
+        }
+    }
+    // Normal
+    else{
+        mesh.children[1].material = new THREE.MeshPhongMaterial( { color: materialConfig.color, emissive: 0x072534, side: THREE.DoubleSide, flatShading: true } );
+        mesh.update = undefined;
+    }
+}
+
+function getPerfValue(div){
+    const v = (performance.now() * 0.001) % (div * 2)
+
+    return (v <= div) ? v / div : 1 - (v - div) / div;
+}
+
+function initGroupGeometry(mesh){
+    const selectedGeometry = window.location.hash.substring(1) || 'BoxGeometry';
+
+    if(geometries[selectedGeometry] !== undefined ){
+        geometries[selectedGeometry](mesh);
+        document.getElementById('newWindow').href += '#' + selectedGeometry;
+    }
+}
+
+// Start
+myApp.onStartApp = function(){
+    scene.background = new THREE.Color( 0x444444 );
+
+    // Camera
+    camera.fov = 75;
+    camera.updateProjectionMatrix();
+    camera.position.set(0, 0, 30);
+    camera.lookAt(0, 0, 0);
+
+    // Orbits control
+    const orbit = new OrbitControls(camera, renderer.domElement);
+	orbit.enableZoom = true;
+
+    // Lights
+    const lights = [];
+    lights[0] = new THREE.DirectionalLight(0xffffff, 3);
+    lights[1] = new THREE.DirectionalLight(0xffffff, 3);
+    lights[2] = new THREE.DirectionalLight(0xffffff, 3);
+
+    lights[0].position.set(0, 200, 0);
+    lights[1].position.set(100, 200, 100);
+    lights[2].position.set(- 100, - 200, - 100);
+
+    scene.add(lights[0]);
+    scene.add(lights[1]);
+    scene.add(lights[2]);
+
+    //scene.add( new THREE.HemisphereLight( 0x8d7c7c, 0x494966, 3 ) );
+    //mglLights.addShadowedLight(scene, 1, 1, 1, 0xffffff, 3.5 );
+    //mglLights.addShadowedLight(scene, 0.5, 1, - 1, 0xffd500, 3 );
+
+    // Group
+	const group = new THREE.Group();
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [], 3 ) );
+
+    const lineMaterial = new THREE.LineBasicMaterial( { color: 0xffffff, transparent: true, opacity: 0.5 } );
+    const meshMaterial = new THREE.MeshPhongMaterial( { color: 0x156289, emissive: 0x072534, side: THREE.DoubleSide, flatShading: true } );
+
+    group.add( new THREE.LineSegments( geometry, lineMaterial ) );
+    group.add( new THREE.Mesh( geometry, meshMaterial ) );
+    this.group = group;
+
+    initGroupGeometry(group);
+
+    scene.add(group);
+
+    // Materials
+    const folder = gui.addFolder('Materials');
+    folder.addColor(materialConfig, 'color').onChange(materialConfig.generateGeometry);
+    folder.add(materialConfig, 'wireframe').onChange(materialConfig.generateGeometry);
+    folder.add(materialConfig, 'fire').onChange(materialConfig.generateGeometry);
+    folder.add(materialConfig, 'ocean').onChange(materialConfig.generateGeometry);
+    folder.add(materialConfig, 'shader', materialConfig.shaderList).onChange(materialConfig.generateGeometry);
+    folder.add(materialConfig, 'shaderHeight').onChange(materialConfig.generateGeometry);
+
+    // Click
+    document.addEventListener('click', function(){
+        materialConfig.autoRotate = false;
+    }, { once: true });
+}
+
+myApp.onAnimateApp = function(deltaTime){
+    if(this.group.update)
+        this.group.update(deltaTime);
+
+
+    if(materialConfig.autoRotate){
+        this.group.rotation.x += 0.005;
+        this.group.rotation.y += 0.005;
+    }
+}
+
+// Run
+myApp.runApp();
+</script>

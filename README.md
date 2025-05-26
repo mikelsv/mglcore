@@ -1,5 +1,11 @@
 # MyGL core for web game development
 
+Ho-ho-ho. A big update has arrived. Sections are no longer needed! Now we have mglApp. It hides complex calls inside itself, leaving you with only simple and pleasant code.
+
+And also open the documentation section. It is small for now, but we will work on it.
+
+https://mikelsv.github.io/docs/ - Documentation for working with the project.
+
 ## /demo
 https://mikelsv.github.io/mglcore/demo/models_and_ligthing.html - models and lighthing demo
 
@@ -25,87 +31,6 @@ https://mikelsv.github.io/mglcore/piratespath - The Pirate's Way.
 Please do not clone or publish these games.
 You can use this code to study the logic of the game.
 
-## Logic - index.html
-```html
-    <div mgl_package>
-        <script src="../mglcore/mgl.package.js"></script>
-        <script>
-            mglPackageInit("main.js");
-        </script>
-    </div>
-```
-mgl.package.js mglPackageInit(); creates html injection for load project scripts and modules.
-
-Also, `<div mgl_package>` will be replaced on plain text code for build and deployment for extern resources.
-
-## Sections - main module logic
-
-```javascript
-// [Import section]
-import * as THREE from 'three';
-
-// [Render section]
-import {scene, camera, renderer, mglInitSections} from 'mglcore/mgl.sections.js';
-mglInitSections.renderSection({ alpha: true, shadow: false });
-
-// [Load section]
-var mglFiles = new mglFilesLoader();
-mglFiles.setScreen(new mglLoadingScreen()); // Show loading screen
-
-mglFiles.loadFile('font_roboto', './models/Roboto Medium_Regular.json'); // Load font file
-
-const mglAudio = new mglAudioLoader();
-
-// [Init section]
-await mglInitSections.initSection(mglFiles);
-
-// [Global section]
-let gameBuilder = new GameBuilder();
-let singleText2d = new mglSingleText2d();
-
-// [Start section]
-mglInitSections.waitForReady(() => mglFiles.isReady(), gameStart);
-
-function gameStart(){
-    mglBuild.log("Start game!", gamer.projectName, gamer.projectVers[0]);
-    mglBuild.startGame();
-
-    const file = mglFiles.getFile('font_roboto'); // Get file data
-}
-
-// [Callback section]
-function callback(data){...}
-
-// [Controls section]
-let stickControl = new mglStickControl3d();
-stickControl.init(scene, true);
-
-let keyboardControl = new mglKeyboardControl();
-keyboardControl.init();
-
-let moveControl = new mglMoveControl();
-moveControl.init(stickControl, keyboardControl);
-
-// [Animate section]
-let lastTime = 0;
-
-function animate(time){
-    requestAnimationFrame(animate);
-
-    // Calculate the time elapsed since the last frame
-    const deltaTime = (time - lastTime) / 1000;
-    lastTime = time;
-
-    let move = moveControl.getMove(SPEED * deltaTime);
-
-    // Render
-    renderer.render(scene, camera);
-}
-
-// Let's start the animation
-animate(0);
-```
-
 ## Changelog
 0.1 - 08.05.2025 15:35 - Make project and main code
 
@@ -127,7 +52,16 @@ animate(0);
 [ ] ToDo: sea_mine animation. Generating a model and animating it from primitives.
 
 [x] (a) New mglGlslCombineTextures for combinate glsl textures.
+
 [ ] (b) ToDo: Parametric Modeling.
+
+#### 0.8 - 26.05.2025 09:06
+[x] The mglApp class has been created. Now it is possible to work with the library through it, which significantly simplifies its use.
+
+[x] Added documentation section.
+
+[x] The mglStats class has become even more informative and easier to use.
+
 
 ## /mglcore - need to refactory and more structure logic.
 mgl.build.js - build functions for any game platforms.

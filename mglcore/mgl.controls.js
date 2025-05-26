@@ -31,8 +31,8 @@ export class mglStickControl{
         }
     }
 
-    getMove(){
-        return new KiVec2(this.moveX, this.moveY);
+    getMove(speed = 1){
+        return new KiVec2(this.moveX * speed, this.moveY * speed);
     }
 
     setRadius(val){

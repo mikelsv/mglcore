@@ -688,7 +688,7 @@ export class mglGeometryGenerator{
     // Tree Generator
     makeTree(_options = {}){
         let options = {
-            treeLimit: 0,
+            treeLimit: 10,
             ... _options
         };
 
@@ -706,7 +706,7 @@ export class mglGeometryGenerator{
             }else if(vId < 9){
                 return { vert: vert[vId], norm: [vert[vId][0] * 0.5773502691896258, vert[vId][1] * 0.5773502691896258, vert[vId][2] * 0.5773502691896258], uv: uvs[vId],
                     id: fId < 5 ? [vId != 8 ? vId + 1 : 5] :
-                    Math.abs(vId - fId) == 1 ? [vId != 8 ? vId + 1 : 5] : 0
+                    (Math.abs(vId - fId) != 1 && vId != 5 && fId != 8) ? [vId != 5 ? vId - 1 : 8] : [9]
                     //id: fId < 5 ? [fId != 4 ? (fId + 1) : 1] : []
                     //    id: fId < 5 ? [vId != 5 ? (vId - 1) : 8] : [9]
                 };
@@ -741,18 +741,24 @@ export class mglGeometryGenerator{
         const result = options.call(vId1, vId0);
 
         //console.log("STEP", iteration);
-        //console.log(vId0, vId1, result);
 
         if(options.treeLimit && iteration >= options.treeLimit)
             return ;
 
         for(let i = 0; i < result.id.length; i ++){
 
+            //if(vId1 > 7)
+                //continue;
+
+            //console.log(vId1 + ' -> ' + result.id[i]);
+
             //const next = call(result.id[i]);
 
             // There are 3 points
             //for(let j = 0; j < next.id.length; j ++){
                 if(vId0 != undefined){
+                    console.log(vId0, vId1, result.id[i]);
+
                     this.addIndex(vId0, vId1, result.id[i]);
                     //console.log("index", vId0, vId1, result.id[i]);
                 }
@@ -1054,5 +1060,7 @@ export class mglModelGeneratorExt extends mglModelGenerator{
             }
 
         makeMine(this);
+
+        return this;
     }
 };

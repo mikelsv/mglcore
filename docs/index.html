@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>MyGL Core Docs</title>
+<style>
+#viewer,
+iframe {
+	position: absolute;
+	border: 0px;
+	left: 0;
+	right: 0;
+	width: 100%;
+	height: 100%;
+	overflow: auto;
+
+
+            border: 1px solid #ccc; /* Граница фрейма */
+}
+
+iframe#viewer {
+	display: fixed;
+}
+
+#viewer {
+	padding-left: var(--panel-width);
+}
+
+#menu {
+position: fixed;
+  z-index: 100;
+  left: 0px;
+  width: var(--panel-width);
+  height: 100%;
+  overflow: auto;
+  border-right: var(--border-style);
+  display: flex;
+  flex-direction: column;
+  transition: 0s 0s height;
+}
+
+</style>
+
+    </head>
+    <body>
+        <div id="menu">
+            <div class="header">
+                <h1>MyGL Core</h1>
+            </div>
+            <div id="content" calss="content">
+            </div>
+        </div>
+        <iframe name="viewer"></iframe>
+    </body>
+</html>
+
+
+<script>
+let menu = {
+    About: {
+        list: [
+            { name: 'About', url: 'about.html' },
+            { name: 'Installation', url: 'install.html' },
+
+        ]
+    },
+
+    ThreeJs: {
+        list: [
+            {name: 'BoxGeometry', url: 'threejs/geometries/BoxGeometry.html' },
+            {name: 'SphereGeometry', url: 'threejs/geometries/SphereGeometry.html' },
+        ]
+    }
+};
+
+function mglMakeMenu(menu){
+    const contentDiv = document.getElementById('content');
+
+    for(const group in menu){
+        if (menu.hasOwnProperty(group)){
+            // Создаем заголовок группы
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'menu-group';
+
+            const groupTitle = document.createElement('h2');
+            groupTitle.textContent = group;
+            groupDiv.appendChild(groupTitle);
+
+            // Создаем список
+            const list = document.createElement('ul');
+            list.className = 'menu-list';
+
+            menu[group].list.forEach(item => {
+                const listItem = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = item.url;
+                link.textContent = item.name;
+                link.setAttribute('target', 'viewer');
+
+                link.addEventListener('click', function(event){
+				    if(event.button !== 0 || event.ctrlKey || event.altKey || event.metaKey)
+                        return;
+
+                    let iframe = document.getElementsByName('viewer');
+
+                    const url = this.getAttribute('href');
+                    iframe.src = url; //link.href;
+                    //console.log(iframe);
+
+				    window.location.hash = item.url;
+
+                    //event.preventDefault();
+
+				    //panel.classList.remove('open');
+
+/*
+				content.querySelectorAll( 'a' ).forEach( function ( item ) {
+
+					item.classList.remove( 'selected' );
+
+				} );
+*/
+				    link.classList.add('selected');
+			    });
+
+                listItem.appendChild(link);
+                list.appendChild(listItem);
+            });
+
+            groupDiv.appendChild(list);
+            contentDiv.appendChild(groupDiv);
+        }
+    }
+}
+
+mglMakeMenu(menu);
+
+</script>

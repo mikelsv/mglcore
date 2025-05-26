@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html><head></head><body></body></html>
+<script src="../../../mglcore/mgl.package.js"></script><script>mglPackage.mglLibPath = '../../../'; mglPackageInit(null);</script>
+
+<script type='module'>
+import * as THREE from 'three';
+import {ParametricGeometry} from 'three/addons/geometries/ParametricGeometry.js';
+
+import {scene, camera, renderer, mglInitSections, mglApp} from 'mglcore/mgl.sections.js';
+
+
+let myApp = new mglApp();
+
+myApp.onStartApp = function(){
+    function parametricSphere(u, v){
+        const radius = 1.0; // Radius of the sphere
+        const phi = u * Math.PI * 2;        // azimuthal angle (around the y-axis)
+        const theta = (v - 0.5) * Math.PI;  // polar angle (from top to bottom)
+
+        return new THREE.Vector3(
+            radius * Math.cos(theta) * Math.cos(phi),
+            radius * Math.sin(theta), // y-axis is vertical
+            radius * Math.cos(theta) * Math.sin(phi)
+        );
+    }
+
+    // Функция для создания параметрической геометрии
+    function parametricFunction(u, v, target) {
+        const x = (1 - v) * Math.sin(u * Math.PI) * 2;
+        const y = (1 - v) * Math.cos(u * Math.PI) * 2;
+        const z = v * 2; // Высота
+        target.set(x, y, z);
+    }
+
+    const geometry = new ParametricGeometry(parametricFunction, 32, 32);
+    const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    // Camera
+    camera.position.set(0, 50, 50);
+    camera.lookAt(0, 0, 0);
+}
+
+myApp.runApp();
+
+</script>
+

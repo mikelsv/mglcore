@@ -600,6 +600,120 @@ void main() {
         return material;
     }
 
+    // https://www.shadertoy.com/view/XsXSWS
+    // size {x, y} - plane size
+    // type: 0 - red, 1 - green, 3 - blue
+    static matFire(_options = {}){
+        let options ={
+            //size: {x:1, y: 1}
+            type: 0,
+            strength: 1,
+            ... _options
+        };
+
+        let material = new THREE.ShaderMaterial({
+            uniforms: {
+                iTime: { value: 0 },
+                iType: { value: !options.type ? 0 : options.type },
+                iStrength: { value: options.strength },
+                //iRes: {value: iRes},
+                //iSize: { value: iSize},
+            },
+            vertexShader: `varying vec2 vUv;
+              void main(){
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+              }`,
+            fragmentShader: `
+varying vec2 vUv;
+uniform float iTime;
+uniform int iType;
+uniform float iStrength;
+
+//////////////////////
+// Fire Flame shader
+
+// procedural noise from IQ
+vec2 hash( vec2 p )
+{
+	p = vec2( dot(p,vec2(127.1,311.7)),
+			 dot(p,vec2(269.5,183.3)) );
+	return -1.0 + 2.0*fract(sin(p)*43758.5453123);
+}
+
+float noise( in vec2 p )
+{
+	const float K1 = 0.366025404; // (sqrt(3)-1)/2;
+	const float K2 = 0.211324865; // (3-sqrt(3))/6;
+
+	vec2 i = floor( p + (p.x+p.y)*K1 );
+
+	vec2 a = p - i + (i.x+i.y)*K2;
+	vec2 o = (a.x>a.y) ? vec2(1.0,0.0) : vec2(0.0,1.0);
+	vec2 b = a - o + K2;
+	vec2 c = a - 1.0 + 2.0*K2;
+
+	vec3 h = max( 0.5-vec3(dot(a,a), dot(b,b), dot(c,c) ), 0.0 );
+
+	vec3 n = h*h*h*h*vec3( dot(a,hash(i+0.0)), dot(b,hash(i+o)), dot(c,hash(i+1.0)));
+
+	return dot( n, vec3(70.0) );
+}
+
+float fbm(vec2 uv)
+{
+	float f;
+	mat2 m = mat2( 1.6,  1.2, -1.2,  1.6 );
+	f  = 0.5000*noise( uv ); uv = m*uv;
+	f += 0.2500*noise( uv ); uv = m*uv;
+	f += 0.1250*noise( uv ); uv = m*uv;
+	f += 0.0625*noise( uv ); uv = m*uv;
+	f = 0.5 + 0.5*f;
+	return f;
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord){
+	vec2 uv = vUv;
+    uv /= 2.;
+    uv.x -= .15;
+
+	vec2 q = uv;
+	q.x *= 5.;
+	q.y *= 2.;
+
+	//float strength = floor(q.x+1.);
+	float T3 = max(3.,1.25*iStrength)*iTime;
+	q.x = mod(q.x,5.)-0.5;
+	q.y -= 0.25;
+	float n = fbm(iStrength*q - vec2(0,T3));
+	float c = 1. - 16. * pow( max( 0., length(q*vec2(1.8+q.y*1.5,.75) ) - n * max( 0., q.y+.25 ) ),1.2 );
+//	float c1 = n * c * (1.5-pow(1.25*uv.y,4.));
+	float c1 = n * c * (1.5-pow(2.50*uv.y,4.));
+	c1 = clamp(c1,0.,1.);
+
+	vec3 col = vec3(1.5*c1, 1.5*c1*c1*c1, c1*c1*c1*c1*c1*c1);
+
+    if(iType == 1)
+    	col = 0.85*col.yxz;
+    if(iType == 2)
+	    col = col.zyx;
+
+	float a = c * (1.-pow(uv.y,3.));
+	fragColor = vec4( mix(vec3(0.),col,a), 1.0);
+}
+
+void main(){
+	vec4 fragColor;// = vec4(0., 0., 0., 1.);
+    mainImage(fragColor, gl_FragCoord.xy);
+    gl_FragColor = fragColor;
+}
+                `,
+            transparent: true
+        });
+
+        return material;
+    }
+
 };
 
 export let mglGlslMainExsamples = {
@@ -704,22 +818,32 @@ void mainImage(inout vec4 fragColor, inout vec2 uv){
         }
 
         this.addItem(item);
+
+        return this;
     }
 
-    addheightDiscard(){
+    addheightDiscard(_options = {}){
+        let options = {
+            height: 1,
+            ... _options
+        };
+
         let item = {
             type: this.MGLCT_AFTER,
             uniforms: {
+                multipleDiscard: { value: options.height },
                 heightDiscard: { value: 1 }
             },
             main: 'fHeightDiscard',
             fragmentShader: `
 uniform float heightDiscard;
+uniform float multipleDiscard;
 
 void fHeightDiscard(inout vec4 fragColor, inout vec2 uv){
-    float stepHeight = 0.1;
-    float maxHeight = vPosition.y + 1.0; // Нормируем по высоте
-    float alpha = smoothstep(0.0, stepHeight, heightDiscard * 2. - maxHeight);
+    float stepHeight = 0.001;
+    float maxHeight = (vPosition.y + multipleDiscard) / multipleDiscard; // Нормируем по высоте
+    //float alpha = smoothstep(0.0, stepHeight, heightDiscard * 2. - maxHeight);
+    float alpha = heightDiscard * 2. > maxHeight ? 1. : 0.;
 
     //vec3 col = mix(vec3(1.), fragColor.xyz, alpha);
     //fragColor = vec4(col, alpha);
@@ -978,10 +1102,519 @@ void main(){
 
         material.update = function(value, beginTime){
             material.uniforms.iTime.value = performance.now() * 0.001 - beginTime;
-            material.uniforms.heightDiscard.value = value;
+
+            if(material.uniforms.heightDiscard)
+                material.uniforms.heightDiscard.value = value;
         }
 
         return material;
     }
 
+};
+
+
+
+export class mglGlslOceanWaves{
+    // Ocean waves. Original: https://shaderfrog.com/2/editor/cman0hya60004paurgo9i4oza
+    // Options:
+    // iQuality
+    // 0 - only color and texture
+    // 1 - frag simple wave
+    // 2 - frag Gerstner wave
+    // 3 - vert simple wave
+    // 4 - vert Gerstner wave
+
+    genCommon(options){
+        return `
+precision highp float;
+precision highp int;
+
+#define PI 3.14159
+
+// Input
+uniform float iTime;
+//uniform int iQuality;
+#define iQuality ${options.iQuality}
+uniform sampler2D iTexture;
+
+
+// Temp
+uniform float time;
+
+uniform float normalOffset;
+uniform float fbmHeight;
+uniform float fbmScale;
+uniform vec3 pMove;
+uniform vec3 pSize;
+uniform vec3 pScale;
+uniform float waveHeight;
+uniform float waveSpeed;
+uniform float waveFrequency;
+uniform float waveSharpness;
+
+// Vertex
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vPosition;
+varying float vHeight;
+
+
+vec3 GerstnerWave(vec4 wave, vec3 p, inout vec3 tangent, inout vec3 binormal, float time) {
+  float steepness = wave.z;
+  float wavelength = wave.w;
+  float k = 2.0 * 3.14159 / wavelength;
+  float c = sqrt(9.8 / k);
+  vec2 d = normalize(wave.xy);
+  float f = k * (dot(d, p.xz) - c * time);
+  float a = steepness / k;
+
+  tangent += vec3(
+    -d.x * d.x * (steepness * sin(f)),
+    d.x * (steepness * cos(f)),
+    -d.x * d.y * (steepness * sin(f))
+  );
+  binormal += vec3(
+    -d.x * d.y * (steepness * sin(f)),
+    d.y * (steepness * cos(f)),
+    -d.y * d.y * (steepness * sin(f))
+  );
+  return vec3(
+    d.x * (a * cos(f)),
+    a * sin(f),
+    d.y * (a * cos(f))
+  );
+}
+
+vec4 mod289(vec4 x) {
+    return x - floor(x * (1.0 / 289.0)) * 289.0;
+}
+
+float mod289(float x) {
+    return x - floor(x * (1.0 / 289.0)) * 289.0;
+}
+
+vec4 permute(vec4 x) {
+    return mod289(((x*34.0)+1.0)*x);
+}
+
+float permute(float x) {
+    return mod289(((x*34.0)+1.0)*x);
+}
+
+vec4 taylorInvSqrt(vec4 r) {
+    return 1.79284291400159 - 0.85373472095314 * r;
+}
+
+float taylorInvSqrt(float r) {
+    return 1.79284291400159 - 0.85373472095314 * r;
+}
+
+vec4 grad4(float j, vec4 ip) {
+    const vec4 ones = vec4(1.0, 1.0, 1.0, -1.0);
+    vec4 p,s;
+
+    p.xyz = floor( fract (vec3(j) * ip.xyz) * 7.0) * ip.z - 1.0;
+    p.w = 1.5 - dot(abs(p.xyz), ones.xyz);
+    s = vec4(lessThan(p, vec4(0.0)));
+    p.xyz = p.xyz + (s.xyz*2.0 - 1.0) * s.www;
+
+    return p;
+}
+
+float snoise(vec4 v, float time) {
+    const vec4  C = vec4( 0.138196601125011,  // (5 - sqrt(5))/20  G4
+            0.276393202250021,  // 2 * G4
+            0.414589803375032,  // 3 * G4
+            -0.447213595499958); // -1 + 4 * G4
+
+    // First corner
+    vec4 i  = floor(v + dot(v, vec4(0.309016994374947451)) );
+    vec4 x0 = v -   i + dot(i, C.xxxx);
+
+    // Other corners
+
+    // Rank sorting originally contributed by Bill Licea-Kane, AMD (formerly ATI)
+    vec4 i0;
+    vec3 isX = step( x0.yzw, x0.xxx );
+    vec3 isYZ = step( x0.zww, x0.yyz );
+    //  i0.x = dot( isX, vec3( 1.0 ) );
+    i0.x = isX.x + isX.y + isX.z;
+    i0.yzw = 1.0 - isX;
+    //  i0.y += dot( isYZ.xy, vec2( 1.0 ) );
+    i0.y += isYZ.x + isYZ.y;
+    i0.zw += 1.0 - isYZ.xy;
+    i0.z += isYZ.z;
+    i0.w += 1.0 - isYZ.z;
+
+    // i0 now contains the unique values 0,1,2,3 in each channel
+    vec4 i3 = clamp( i0, 0.0, 1.0 );
+    vec4 i2 = clamp( i0-1.0, 0.0, 1.0 );
+    vec4 i1 = clamp( i0-2.0, 0.0, 1.0 );
+
+    //  x0 = x0 - 0.0 + 0.0 * C.xxxx
+    //  x1 = x0 - i1  + 1.0 * C.xxxx
+    //  x2 = x0 - i2  + 2.0 * C.xxxx
+    //  x3 = x0 - i3  + 3.0 * C.xxxx
+    //  x4 = x0 - 1.0 + 4.0 * C.xxxx
+    vec4 x1 = x0 - i1 + C.xxxx;
+    vec4 x2 = x0 - i2 + C.yyyy;
+    vec4 x3 = x0 - i3 + C.zzzz;
+    vec4 x4 = x0 + C.wwww;
+
+    // Permutations
+    i = mod289(i);
+    float j0 = permute( permute( permute( permute(i.w) + i.z) + i.y) + i.x);
+    vec4 j1 = permute( permute( permute( permute (
+                        i.w + vec4(i1.w, i2.w, i3.w, 1.0 ))
+                    + i.z + vec4(i1.z, i2.z, i3.z, 1.0 ))
+                + i.y + vec4(i1.y, i2.y, i3.y, 1.0 ))
+            + i.x + vec4(i1.x, i2.x, i3.x, 1.0 ));
+
+    // Gradients: 7x7x6 points over a cube, mapped onto a 4-cross polytope
+    // 7*7*6 = 294, which is close to the ring size 17*17 = 289.
+    vec4 ip = vec4(1.0/294.0, 1.0/49.0, 1.0/7.0, 0.0) ;
+
+    vec4 p0 = grad4(j0,   ip);
+    vec4 p1 = grad4(j1.x, ip);
+    vec4 p2 = grad4(j1.y, ip);
+    vec4 p3 = grad4(j1.z, ip);
+    vec4 p4 = grad4(j1.w, ip);
+
+    // Normalise gradients
+    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+    p0 *= norm.x;
+    p1 *= norm.y;
+    p2 *= norm.z;
+    p3 *= norm.w;
+    p4 *= taylorInvSqrt(dot(p4,p4));
+
+    // Mix contributions from the five corners
+    vec3 m0 = max(0.6 - vec3(dot(x0,x0), dot(x1,x1), dot(x2,x2)), 0.0);
+    vec2 m1 = max(0.6 - vec2(dot(x3,x3), dot(x4,x4)            ), 0.0);
+    m0 = m0 * m0;
+    m1 = m1 * m1;
+    return 49.0 * ( dot(m0*m0, vec3( dot( p0, x0 ), dot( p1, x1 ), dot( p2, x2 )))
+            + dot(m1*m1, vec2( dot( p3, x3 ), dot( p4, x4 ) ) ) ) ;
+}
+
+float surface(vec4 coord, float time) {
+	float n = 0.0;
+
+	n += 0.25 * abs( snoise( coord * 4.0, time ) );
+	n += 0.5 * abs( snoise( coord * 8.0, time ) );
+	n += 0.25 * abs( snoise( coord * 16.0, time ) );
+	n += 0.125 * abs( snoise( coord * 32.0, time ) );
+	n += 0.125 * abs( snoise( coord * 64.0, time ) );
+
+	return n;
+}
+
+vec3 displace(vec3 point, float time) {
+	//vec3 tangent = orthogonal(normal);
+	//vec3 binormal = normalize(cross(normal, tangent));
+
+  vec3 tangent = vec3(0.0, 0.0, 1.0);
+  vec3 binormal = vec3(0.0, 0.0, 1.0);
+
+  float yScale = clamp(point.y * 2.0, 0.0, 1.0);
+
+  // Undo the flattening of the position scale
+  float reset = (1.0 / pScale.y);
+  point.y += surface(
+    vec4((point + time * 0.1) * fbmScale, 1.0), time
+  ) * fbmHeight * reset;
+
+  vec3 wave1 = GerstnerWave(
+    // dirx, dir y, steepness, wavelength
+    vec4(vec2(-1.0, 0.0), waveSharpness, pScale.x * 0.5 * waveFrequency * pSize.x),
+    point,
+    tangent,
+    binormal,
+    time
+  );
+  vec3 wave2 = GerstnerWave(
+    // dirx, dir y, steepness, wavelength
+    vec4(vec2(1.0, 0.0), 0.25, 4.0 * waveFrequency * pSize.x),
+    point,
+    tangent,
+    binormal,
+    time
+  );
+  vec3 wave3 = GerstnerWave(
+    // dirx, dir y, steepness, wavelength
+    vec4(vec2(1.0, 1.0), 0.15, 6.0 * waveFrequency * pSize.x),
+    point,
+    tangent,
+    binormal,
+    time
+  );
+  vec3 wave4 = GerstnerWave(
+    // dirx, dir y, steepness, wavelength
+    vec4(vec2(1.0, 1.0), 0.4, 2.0 * waveFrequency * pSize.x),
+    point,
+    tangent,
+    binormal,
+    time
+  );
+
+  vec3 newPos = point;
+  float scale = waveHeight * yScale * reset;
+  newPos += wave1 * scale;
+  newPos += wave2 * scale * 0.5;
+  newPos += wave3 * scale * 0.5;
+  newPos += wave4 * scale * 0.2;
+
+  //vHeight = newPos.y;
+
+  return newPos;
+}
+
+// http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts
+vec3 orthogonal(vec3 v) {
+  return normalize(abs(v.x) > abs(v.z)
+    ? vec3(-v.y, v.x, 0.0)
+    : vec3(0.0, -v.z, v.y));
+}
+        `;
+    }
+
+    genFrag(options){
+        //let texCode = options.texture ? `col.xyz = texture(iTexture, vUv).xyz;` : ''; // col = calcColor();
+        let texCode = options.texture ? `texture(iTexture, sUv)` : 'vec4(1.)'; // col = calcColor();
+        let common = this.genCommon(options);
+
+       return `
+${common}
+
+uniform vec3 waterColor;
+uniform vec3 waterHighlight;
+
+uniform float offset;
+uniform float contrast;
+uniform float brightness;
+
+vec3 calcColor(vec3 color, float vHeight){
+  float mask = (pow(vHeight, 2.) - offset) * contrast;
+  vec3 diffuseColor = mix(color, waterHighlight, mask);
+  diffuseColor *= brightness;
+  return diffuseColor;
+}
+
+${options.fragCode}
+
+void main(){
+    vec3 col = waterColor;
+    vec2 uv = vUv;
+    vec2 sUv = fract(uv * pSize.xz);
+    float height = vHeight;
+
+    vec4 tex = ${texCode};
+    ${options.fragMain}
+
+    if(iQuality == 0){
+        height = .5;
+    }
+
+    if(iQuality == 1){
+        float wave = sin(vPosition.x * waveFrequency + iTime * waveSpeed) * waveHeight;
+        height = wave;
+    }
+
+    if(iQuality == 2){
+        float scaledTime = iTime * waveSpeed;
+        vec3 newPosition = displace(vPosition, scaledTime);
+        height = newPosition.y;
+    }
+
+    vec3 waveCol = calcColor(col, height);
+/*
+    if(uv.y < .1)
+        gl_FragColor = vec4(col, 1.);
+    else if(uv.y < .2)
+        gl_FragColor = vec4(waveCol, 1.);
+    else if(uv.y < .3)
+        gl_FragColor = vec4(waveCol * tex.rgb, 1.);
+
+    else if(uv.y < .4)
+
+    gl_FragColor = vec4(
+        mix(
+        waveCol * tex.rgb,
+        waveCol,
+        1.0 - clamp(height * 50.0, 0.0, 1.0)
+        ),
+        1.0
+    );
+
+    else*/
+        gl_FragColor = vec4(waveCol * tex.rgb, 1.);
+
+}
+        `;
+
+    }
+
+    genVert(options){
+        let common = this.genCommon(options);
+
+        return  `
+${common}
+
+${options.vertCode}
+
+void main(){
+    vUv = uv;
+    float yScale = clamp(position.y * 2.0, 0.0, 1.0);
+    vec3 position = position * pScale;
+    float scaledTime = time * waveSpeed;
+    vec3 finalPos;
+
+    if(iQuality <= 2){
+        vPosition = position;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        vHeight = 0.;
+        return ;
+    }
+
+    // Simple wave
+    if(iQuality == 3){
+        // Undo the flattening of the position scale
+        float reset = (1.0 / pScale.y);
+        vec3 point = position;
+        point.y += surface(
+            vec4((point + time * 0.1) * fbmScale, 1.0), time
+        ) * fbmHeight * reset;
+
+        vec3 tangent = vec3(0.0, 0.0, 1.0);
+        vec3 binormal = vec3(0.0, 0.0, 1.0);
+
+        vec3 wave1;
+        wave1.y = sin(point.x - time * waveSpeed) * waveHeight;
+
+        vec3 newPos = point;
+        float scale = waveHeight * yScale * reset;
+        newPos += wave1 * scale;
+        //newPos += wave2 * scale * 0.5;
+        //newPos += wave3 * scale * 0.5;
+        //newPos += wave4 * scale * 0.2;
+
+        //finalPos = point;
+        finalPos = newPos;
+
+        vHeight = finalPos.y;
+    } else if(iQuality == 4){
+        float scaledTime = time * waveSpeed;
+        vec3 displacedPosition = displace(position, scaledTime);
+        finalPos = mix(position, displacedPosition, yScale);
+    } else if(iQuality == 5){
+        float scaledTime = time * waveSpeed;
+        vec3 displacedPosition = displace(position, scaledTime);
+
+        vec3 tangent = orthogonal(normal);
+        vec3 bitangent = normalize(cross(normal, tangent));
+        vec3 neighbour1 = position + tangent * normalOffset;
+        vec3 neighbour2 = position + bitangent * normalOffset;
+        vec3 displacedNeighbour1 = displace(neighbour1, scaledTime);
+        vec3 displacedNeighbour2 = displace(neighbour2, scaledTime);
+
+        // https://i.ya-webdesign.com/images/vector-normals-tangent-16.png
+        vec3 displacedTangent = displacedNeighbour1 - displacedPosition;
+        vec3 displacedBitangent = displacedNeighbour2 - displacedPosition;
+
+        // https://upload.wikimedia.org/wikipedia/commons/d/d2/Right_hand_rule_cross_product.svg
+        vec3 displacedNormal = normalize(cross(displacedTangent, displacedBitangent));
+
+        vNormal = normalMatrix * displacedNormal;
+
+        finalPos = mix(position, displacedPosition, yScale);
+    }
+
+    ${options.vertMain}
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(finalPos, 1.0);
+}
+        `;
+    }
+
+    buildShader(_options = {}){
+        let options = {
+            // Main
+            iQuality: 4, // Constant value
+
+            // Vertex
+            vertCode: "",
+            vertMain: "",
+            //normalOffset: .1,
+            fbmHeight: 0.042,
+            fbmScale: 2.371,
+            pMove: [0, 0, 0],
+            pSize: [1, 1, 1],
+            pScale: [1, 1, 1],
+            waveHeight: 0.848,
+            waveSpeed: 1,
+            waveFrequency: 0.625,
+            waveSharpness: 0.744,
+
+            // Fragment
+            fragCode: "",
+            fragMain: "",
+            waterColor: new THREE.Color(0, 0.6666666666666666, 1),
+            waterHighlight: new THREE.Color(1, 1, 1),
+            texture: undefined,
+            offset: 0.0,
+            contrast: 1.,
+            brightness: 1.,
+
+            uniforms: {
+                //iTime: { value: 0 }
+            },
+            ... _options
+        };
+
+        options.uniforms = {
+            // Global
+            time: { value: 0 },
+            iTime: { value: 0 },
+            //iQuality: { value: options.iQuality },
+
+            // Vertex
+            //normalOffset: { value: .1 },
+            fbmHeight: { value: options.fbmHeight },
+            fbmScale: { value: options.fbmScale },
+            pMove: { value: options.pMove },
+            pSize: { value: options.pSize },
+            pScale: { value: options.pScale },
+            waveHeight: { value: options.waveHeight },
+            waveSpeed: { value: options.waveSpeed },
+            waveFrequency: { value: options.waveFrequency },
+            waveSharpness: { value: options.waveSharpness },
+
+            // Fragment
+            iTexture: { value: options.texture },
+            waterColor: { value: options.waterColor },
+            waterHighlight: { value: options.waterHighlight },
+            offset: { value: options.offset },
+            contrast: { value: options.contrast },
+            brightness: { value: options.brightness },
+            ... options.uniforms
+        };
+
+        // Shaders
+        const vertexShader = this.genVert(options);
+        const fragmentShader = this.genFrag(options);
+
+        // Materiaal
+        const material = new THREE.ShaderMaterial({
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader,
+            uniforms: options.uniforms,
+        });
+
+        material.update = function(deltaTime){
+            material.uniforms.iTime.value += deltaTime;
+            material.uniforms.time.value += deltaTime;
+        }
+
+        return material;
+    }
 };

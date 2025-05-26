@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<title>ToDo: ocean water</title>
+		<style>
+            body {
+                margin: 0;
+                overflow: hidden;
+                background-color: #000;
+                touch-action: none;
+            }
+        </style>
+	</head>
+	<body>
+        <div mgl_package>
+            <script src="../mglcore/mgl.package.js"></script>
+            <script>
+                mglPackageInit(null);
+            </script>
+        </div>
+	</body>
+</html>
+
+<script type="module">
+// [Import section]
+import * as THREE from 'three';
+import {VertexNormalsHelper} from 'three/addons/helpers/VertexNormalsHelper.js';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+
+import {mglLoadingScreen, mglModelsLoader, mglAudioLoader, mglSingleItems, mglGameSpawnClass, mglLights} from 'mglcore/mgl.threejs.js';
+import {mglSingleText2d, mglTextControls, mglTextControls2d, mglCenterModel} from 'mglcore/mgl.threejs.js';
+import {mglStickControl, mglStickControl2d, mglStickControl3d, mglKeyboardControl, mglMoveControl, mglWindowControl} from 'mglcore/mgl.controls.js'
+import {mglGeometry, mglModelGenerator} from 'mglcore/mgl.geometry.js';
+import {mglFlashScreen} from 'mglcore/mgl.screen.js'
+import {mglGlslTextures, mglGlslMainExsamples, mglGlslOceanWaves} from 'mglcore/mgl.texture.js';
+import {mglStats} from 'mglcore/mgl.stats.js';
+
+import GUI from 'lil-gui';
+
+// [Render section]
+import {scene, camera, renderer, mglInitSections} from 'mglcore/mgl.sections.js';
+mglInitSections.renderSection({ alpha: true, shadow: true });
+
+// [Load section]
+var mglModels = new mglModelsLoader();
+mglModels.setScreen(new mglLoadingScreen());
+
+mglModels.loadModel("water", "water-tex-cartoon.jpg");
+
+// [Init section]
+await mglInitSections.initSection(mglModels);
+
+// [Global section]
+
+// Add OrbitControls to rotate the camera
+const controls = new OrbitControls(camera, renderer.domElement);
+
+let stats;
+if(mglBuild.debug){
+    stats = new mglStats(renderer);
+    stats.showAllPanels();
+}
+
+export class meshWater{
+    init(scene){
+
+        const ocean = new mglGlslOceanWaves();
+        const size = [10, 1, 1];
+        const geometry = new THREE.BoxGeometry(...size, 128, 10, 128);
+        //const geometry = new THREE.PlaneGeometry(1, 1, 128 * 10, 10);
+
+        let options = {
+            iQuality: 4,
+            pSize: size,
+            pScale: [1, .5, 1],
+            offset: 0.042,
+            contrast: 1.739,
+            brightness: 1.535,
+            texture: mglModels.getModel("water"),
+            //fragMain: mglGlslMainExsamples.getShader("concentric_circles")
+        };
+
+        const mat = ocean.buildShader(options);
+
+        let water = new THREE.Mesh(geometry, mat);
+        water.position.y = 0;
+        scene.add(water);
+
+        water.update = function(deltaTime){
+            water.material.uniforms.time.value += deltaTime;
+
+            if(water.material.uniforms.iTime)
+                water.material.uniforms.iTime.value += deltaTime;
+        }
+
+        // Test
+
+if(0){
+    const geometry = new THREE.PlaneGeometry(1, 1);
+    const material = mglGlslTextures.matFire({x:1, y:1}, 0, 10);
+    let fire = new THREE.Mesh(geometry, material);
+    fire.rotation.x = -Math.PI / 2;
+
+    fire.update = function(deltaTime){
+        fire.material.uniforms.iTime.value += deltaTime;
+    }
+
+    scene.add(fire);
+
+    return fire;
+}
+
+
+
+
+
+
+        return water;
+    }
+};
+
+let water;
+
+// [Start section]
+mglInitSections.waitForReady(() => mglModels.isReady(), gameStart);
+
+// Start game
+function gameStart(){
+    mglBuild.log("Start game!", gamer.projectName, gamer.projectVers[0]);
+    mglBuild.startGame();
+
+    water = new meshWater().init(scene);
+
+    // Lights
+    scene.add( new THREE.HemisphereLight( 0x8d7c7c, 0x494966, 3 ) );
+    mglLights.addShadowedLight(scene, 1, 1, 1, 0xffffff, 3.5 );
+    mglLights.addShadowedLight(scene, 0.5, 1, - 1, 0xffd500, 3 );
+
+    // Camera
+    camera.position.y = 5;
+    camera.position.z = 2;
+
+    // Hide loading screen
+    mglModels.getScreen().hideScreen();
+}
+
+// [Controls section]
+let moveControl = new mglMoveControl();
+moveControl.initKeyboard();
+
+// [Animate section]
+let lastTime = 0;
+
+function animate(time) {
+    requestAnimationFrame(animate);
+
+    // Stats
+    if(mglBuild.debug)
+        stats.beginAnimate();
+
+    // Calculate the time elapsed since the last frame
+    const deltaTime = (time - lastTime) / 1000;
+    lastTime = time;
+
+    // Move
+    let move = moveControl.getMoveFromCamera(camera, deltaTime);
+    //hero.position.x += move.x;
+    //hero.position.z += move.y;
+
+    if(water)
+        water.update(deltaTime);
+
+    // Camera
+    camera.lookAt(0, 0, 0);
+
+    // Render
+    renderer.render(scene, camera);
+
+    // Stats
+    if(mglBuild.debug)
+        stats.endAnimate();
+}
+
+// Let's start the animation
+animate(0);
+
+// [Extern section]
+mglWindowControl.addResizeEvent(camera, renderer);
+
+if(!mglBuild.debug)
+    mglWindowControl.addDisableContextMenu();
+
+</script>

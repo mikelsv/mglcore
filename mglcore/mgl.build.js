@@ -2,6 +2,7 @@ var mglBuild = {
     platform: "local",
     build: "-",
     debug: true,
+    startedLevel: false,
 
     bonusFlags: {
         BONUS_OPEN: 1,
@@ -19,10 +20,16 @@ var mglBuild = {
     },
 
     startLevel(){
+        this.startedLevel = true;
         mglBuild.log("mglBuild. Level started!");
     },
 
+    stateLevel(){
+        return this.startedLevel;
+    },
+
     stopLevel(){
+        this.startedLevel = false;
         mglBuild.log("mglBuild. Level ended!");
     },
 

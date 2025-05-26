@@ -2,6 +2,7 @@ import * as THREE from 'three';
 //import {TextureLoader} from 'three/addons/loaders/TextureLoader.js';
 import {STLLoader} from 'three/addons/loaders/STLLoader.js';
 import {GLTFLoader} from  'three/addons/loaders/GLTFLoader.js';
+import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
 import {SVGLoader} from 'three/addons/loaders/SVGLoader.js';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
 
@@ -103,7 +104,8 @@ const mglFilesLoaderState = Object.freeze({
 //    INIT: 1,
     LOADING: 2,
     READY: 3,
-    FAIL: 4
+    ASYNK: 4,
+    FAIL: 5
 });
 
 // Deprecated!
@@ -115,8 +117,6 @@ export class mglFilesLoader{
     load = [];
     files = [];
     error = undefined;
-
-
 
     getScreen(){
         return this.screen;
@@ -153,7 +153,22 @@ export class mglFilesLoader{
         this.isReady();
     }
 
-    getFileExtension(filename) {
+    async asyncLoad(){
+        if(this.load.length){
+            this.state = mglFilesLoaderState.ASYNK;
+            this.#loadFileNext();
+        } else{
+            return 1;
+        }
+
+        //  return new Promise((resolve) => {
+        //     setTimeout(() => {
+        //         resolve("Данные получены");
+        //     }, 2000);
+        // });
+    }
+
+    getFileExtension(filename){
         const parts = filename.split('.');
         return parts.length > 1 ? parts.pop() : ''; // Returns the file extension or an empty string.
     }
@@ -170,9 +185,14 @@ export class mglFilesLoader{
             loader = new SVGLoader();
         else if(ext == 'stl')
             loader = new STLLoader();
-        else if(ext == 'gltf' || ext == 'glb')
+        else if(ext == 'gltf' || ext == 'glb'){
             loader = new GLTFLoader();
-        else if(ext == 'json' || ext == 'ttf')
+
+            const dracoLoader = new DRACOLoader();
+            dracoLoader.setDecoderPath( mglPackage.mglLibPath + 'extern/addons/libs/draco/');
+            loader.setDRACOLoader( dracoLoader );
+
+        } else if(ext == 'json' || ext == 'ttf')
             loader = new FontLoader();
         else if(ext == 'mp3' || ext == 'wav')
             loader = new THREE.AudioLoader();
@@ -198,7 +218,10 @@ export class mglFilesLoader{
             file.data = object;
             loaderClass.files.push(file);
 
-            loaderClass.state = mglFilesLoaderState.READY;
+            if(loaderClass.state == mglFilesLoaderState.LOADING)
+                loaderClass.state = mglFilesLoaderState.READY;
+            else if(loaderClass.state == mglFilesLoaderState.ASYNK)
+                loaderClass.loadFileNext();
 
         }, undefined, function (error) {
             loaderClass.state = mglFilesLoaderState.READY;
@@ -207,7 +230,7 @@ export class mglFilesLoader{
             if(loaderClass.screen)
                 loaderClass.screen.setError(loaderClass.error);
 
-            console.error("mglFilesLoader.loadFileNext(): " + loaderClass.error);
+            console.error("mglFilesLoader.loadFileNext(): " + loaderClass.error, error);
 
             loaderClass.state = mglFilesLoaderState.FAIL;
         });

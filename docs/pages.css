@@ -1,0 +1,95 @@
+:root {
+	color-scheme: light dark;
+
+	--color-blue: #049EF4;
+	--text-color: #444;
+
+	--font-size: 16px;
+	--line-height: 26px;
+
+	--border-style: 1px solid #E8E8E8;
+	--panel-width: 300px;
+	--page-padding: 24px;
+	--max-width: 760px;
+	--icon-size: 20px;
+}
+
+html {
+    font-size: var(--font-size);
+    line-height: var(--line-height);
+}
+
+body {
+	color: var(--text-color);
+	tab-size: 4;
+	overflow: auto;
+	max-width: var(--max-width);
+	margin: 0 auto;
+	padding-top: var(--page-padding);
+	padding-bottom: var(--page-padding);
+	padding-right: var(--page-padding);
+	padding-left: calc(var(--page-padding) + var(--panel-width));
+	word-break: break-word;
+}
+
+a {
+	color: var(--color-blue);
+	cursor: pointer;
+	text-decoration: none;
+}
+
+h1 {
+	font-size: 40px;
+	line-height: 48px;
+	font-weight: normal;
+	margin-left: -2px;
+	margin-top: 16px;
+	margin-bottom: -8px;
+}
+
+h2 {
+	font-size: 28px;
+	line-height: 36px;
+	font-weight: normal;
+	margin-left: -1px;
+	margin-top: 28px;
+	margin-bottom: -8px;
+}
+
+h3 {
+	font-size: 20px;
+	line-height: 28px;
+	font-weight: normal;
+	margin-top: 24px;
+	margin-bottom: -8px;
+}
+
+iframe {
+  width: 100%;
+  height: 420px;
+  border: 0;
+}
+
+code {
+	font-size: calc(var(--font-size) - 1px);
+	line-height: calc(var(--line-height) - 1px);
+	margin: 16px calc(-1 * var(--page-padding));
+}
+
+ol code,
+ul code {
+	margin: 16px 0;
+}
+
+code {
+	position: relative;
+}
+
+code.inline {
+	display: inline-block;
+	vertical-align: middle;
+	border-radius: 4px;
+	padding: 0px 5px;
+	background: #F5F5F5;
+	margin: 0;
+}
