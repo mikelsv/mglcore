@@ -4,7 +4,7 @@ Ho-ho-ho. A big update has arrived. Sections are no longer needed! Now we have m
 
 And also open the documentation section. It is small for now, but we will work on it.
 
-https://mikelsv.github.io/docs/ - Documentation for working with the project.
+https://mikelsv.github.io/mglcore/docs/ - Documentation for working with the project.
 
 ## /demo
 https://mikelsv.github.io/mglcore/demo/models_and_ligthing.html - models and lighthing demo
