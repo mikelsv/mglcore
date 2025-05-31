@@ -40,10 +40,14 @@ export class mglInitSections{
         if(!options.canvas)
             Object.assign(canvas.style, {
             'user-select': 'none',
-            '-webkit-user-select': 'none',
+            'touch-action': 'manipulation',
+            '-khtml-user-select': 'none',
             '-moz-user-select': 'none',
             '-ms-user-select': 'none',
+            '-webkit-text-size-adjust': 'none',
+            '-webkit-touch-callout': 'none',
             '-webkit-user-drag': 'none',
+            '-webkit-user-select': 'none',
             'position': 'fixed',
             'top': '0',
             'left': '0',
@@ -51,9 +55,29 @@ export class mglInitSections{
             'height': '100%',
             'outline': 'none'
         });
+
+        // Body styles
+        //  Object.assign(document.body.style, {
+        //     'user-select': 'none',
+        //     'touch-action': 'manipulation',
+        //     '-khtml-user-select': 'none',
+        //     '-moz-user-select': 'none',
+        //     '-ms-user-select': 'none',
+        //     '-webkit-text-size-adjust': 'none',
+        //     '-webkit-touch-callout': 'none',
+        //     '-webkit-user-drag': 'none',
+        //     '-webkit-user-select': 'none',
+        //  });
     }
 
     static async initSection(mglModels){
+        // Debug url
+        const url = new URL(window.location.href);
+        const mgldebugValue = url.searchParams.get("mgldebug");
+        if(mgldebugValue !== null && mgldebugValue !== undefined){
+            mglBuild.debug = mgldebugValue !== 'false' && mgldebugValue !== '0';
+        }
+
         // Console && page
         mglBuild.console = new mglConsole({ init: mglBuild.debug });
         mglBuild.log = (...args) => mglBuild.console.log(...args);
@@ -83,12 +107,13 @@ export class mglInitSections{
         });
 
         // Lock the context menu
-        if(!mglBuild.debug){
+        if(!mglBuild.debug && !url.searchParams.get("mglmenu")){
             const canvas = renderer.domElement;
-            canvas.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                return false;
-            });
+            // canvas.addEventListener('contextmenu', (e) => {
+            //     console.log("!contextmenu");
+            //     e.preventDefault();
+            //     return false;
+            // }, { passive: false });
         }
     }
 };
@@ -143,6 +168,7 @@ export class mglApp{
         // [Load section]
         this.mglFiles = new mglFilesLoader();
         this.mglFiles.setScreen(new mglLoadingScreen());
+        gamer.mglFiles = this.mglFiles;
 
         // User call
         this.onLoadApp();

@@ -169,7 +169,7 @@ void main(){
         // Update resolution
         this.flasher.material.uniforms.iResolution.value = new THREE.Vector2(innerWidth, innerHeight);
 
-        console.log("redFlashBorder alert!");
+        //console.log("redFlashBorder alert!");
     }
 
     setValue(value){

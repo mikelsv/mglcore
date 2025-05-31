@@ -11,9 +11,9 @@ var mglBuild = {
         BONUS_CLOSE: 4
     },
 
-    init(){
-        mglBuild.log("mglBuild.init() for ", this.platform);
-    },
+    // init(){
+    //     mglBuild.log("mglBuild.init() for ", this.platform);
+    // },
 
     startApp(){
         mglBuild.log("mglBuild. App started!");

@@ -718,34 +718,34 @@ void main(){
 
 export let mglGlslMainExsamples = {
     shaders: [
-        { name: "shadertoy", title: "Shadertoy new", code: "col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));"},
-        { name: "rainbow_gradient", title: "Rainbow gradient", code: "col = 0.5 + 0.5 * cos(iTime + uv.xyx * 5.0 + vec3(0, 2, 4));"},
-        { name: "rainbow_waves", title: "Rainbow Waves", code: "col = 0.5 + 0.5 * cos(iTime + uv.xyx * 10.0 + vec3(0, 1, 2));"},
-        { name: "pseudo_random_noise", title: "Pseudo-random noise", code: "col = 0.5 + 0.5 * cos(iTime + uv.xyx * 20.0 + vec3(0, 3, 6) * fract(sin(uv.x * 10.0) * 10000.0));"},
-        { name: "blink_color", title: "Blink Color", code: "col = vec3(0.5 + 0.5 * sin(iTime));"},
-        { name: "concentric_circles", title: "Concentric circles", code: "float d = length(uv - 0.5); col = 0.5 + 0.5 * cos(-iTime + d * 10.0 + vec3(0, 2, 4));"},
-        { name: "chessboard", title: "Chessboard", code: "vec2 tile = floor(uv * 10.0); float pattern = mod(tile.x + tile.y, 2.0); col = vec3(1.0) * pattern;" },
-        { name: "pulsating_circle", title: "Pulsating circle", code: "float d = length(uv - 0.5); col = vec3(smoothstep(0.3, 0.3 + 0.1 * sin(iTime), d));"},
-        { name: "colored_stripes", title: "Chessnoise", code: "col = vec3(sin(uv.x * 20.0 + iTime), cos(uv.y * 15.0 + iTime * 0.7), sin((uv.x + uv.y) * 10.0 + iTime * 1.3)) * 0.5 + 0.5;"},
-        { name: "chessnoise", title: "Chessnoise", code: "float noise = sin(uv.x * 50.0 + iTime) * sin(uv.y * 30.0 + iTime); col = vec3(noise * 0.5 + 0.5, noise * 0.3, 0.0);"},
+        { name: "shadertoy", title: "Shadertoy new", code: "col.xyz = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));"},
+        { name: "rainbow_gradient", title: "Rainbow gradient", code: "col.xyz = 0.5 + 0.5 * cos(iTime + uv.xyx * 5.0 + vec3(0, 2, 4));"},
+        { name: "rainbow_waves", title: "Rainbow Waves", code: "col.xyz = 0.5 + 0.5 * cos(iTime + uv.xyx * 10.0 + vec3(0, 1, 2));"},
+        { name: "pseudo_random_noise", title: "Pseudo-random noise", code: "col.xyz = 0.5 + 0.5 * cos(iTime + uv.xyx * 20.0 + vec3(0, 3, 6) * fract(sin(uv.x * 10.0) * 10000.0));"},
+        { name: "blink_color", title: "Blink Color", code: "col = vec4(1., 1., 1., 0.5 + 0.5 * sin(iTime));"},
+        { name: "concentric_circles", title: "Concentric circles", code: "float d = length(uv - 0.5); col.xyz = 0.5 + 0.5 * cos(-iTime + d * 10.0 + vec3(0, 2, 4));"},
+        { name: "chessboard", title: "Chessboard", code: "vec2 tile = floor(uv * 10.0); float pattern = mod(tile.x + tile.y, 2.0); col.xyz = vec3(1.0) * pattern;" },
+        { name: "pulsating_circle", title: "Pulsating circle", code: "float d = length(uv - 0.5); col.xyz = vec3(smoothstep(0.3, 0.3 + 0.1 * sin(iTime), d));"},
+        { name: "colored_stripes", title: "Chessnoise", code: "col.xyz = vec3(sin(uv.x * 20.0 + iTime), cos(uv.y * 15.0 + iTime * 0.7), sin((uv.x + uv.y) * 10.0 + iTime * 1.3)) * 0.5 + 0.5;"},
+        { name: "chessnoise", title: "Chessnoise", code: "float noise = sin(uv.x * 50.0 + iTime) * sin(uv.y * 30.0 + iTime); col.xyz = vec3(noise * 0.5 + 0.5, noise * 0.3, 0.0);"},
         { name: "spiral", title: "Spiral", code: `
 vec2 center = uv - 0.5;
 float angle = atan(center.y, center.x);
 float radius = length(center);
-col = vec3(sin(angle * 5.0 + radius * 20.0 - iTime * 2.0));
+col.xyz = vec3(sin(angle * 5.0 + radius * 20.0 - iTime * 2.0));
 `},
 
     { name: "pixel_rain", title: "Pixel rain", code: `
 vec2 pixelUV = floor(uv * 50.0) / 50.0;
 float speed = fract(pixelUV.x * 10.0);
 float drop = fract(iTime * speed + pixelUV.y * 10.0);
-col = vec3(step(0.95, drop));
+col.xyz = vec3(step(0.95, drop));
 `},
 
-    { name: "rainbow", title: "Rainbow", code: "float hue = uv.x + sin(iTime * 0.5) * 0.1; col = 0.5 + 0.5 * cos(6.28318 * hue + vec3(0, 2, 4));"},
+    { name: "rainbow", title: "Rainbow", code: "float hue = uv.x + sin(iTime * 1.5) * 0.1; col.xyz = 0.5 + 0.5 * cos(6.28318 * hue + vec3(0, 2, 4));"},
 
     { name: "flashing_chaos", title: "Flashing chaos", code: `
-col = vec3(
+col.xyz = vec3(
     fract(sin(uv.x * 100.0 + iTime) * 43758.5453),
     fract(cos(uv.y * 80.0 + iTime * 2.0) * 23421.631),
     fract(sin((uv.x + uv.y) * 70.0 + iTime * 1.5) * 12345.678)
@@ -781,6 +781,7 @@ col = vec3(
 // iResolution (float, float) - resolution
 export class mglGlslCombineTextures{
     items = [];
+    itemId = 0;
 
     // Types
     MGLCT_UNKNOWN = 0;
@@ -790,8 +791,39 @@ export class mglGlslCombineTextures{
 
     constructor(){}
 
+    getRandomId(){
+        this.itemId ++;
+        return `rId_${this.itemId}_`;
+    }
+
     addItem(item){
         this.items.push(item);
+    }
+
+    addMainColor(_options = {}){
+        let options = {
+            color: 0xffffff,
+            ... _options
+        };
+
+        const rId = this.getRandomId();
+
+        let item = {
+            type: this.MGLCT_MAIN,
+            main: 'mainImage',
+            fragmentShader: `
+uniform vec3 ${rId}color;
+
+void mainImage(inout vec4 fragColor, inout vec2 uv){
+    fragColor = vec4(${rId}color, 1.);
+}`,
+            uniforms: {
+                [`${rId}color`]: { value: new THREE.Color(options.color) }
+            },
+        }
+
+        this.addItem(item);
+
     }
 
     addMainTemplate(name = "shadertoy"){
@@ -802,18 +834,12 @@ export class mglGlslCombineTextures{
             main: 'mainImage',
             fragmentShader: `
 void mainImage(inout vec4 fragColor, inout vec2 uv){
-    // Normalized pixel coordinates (from 0 to 1)
-    //vec2 uv = fragCoord / iResolution.xy;
-
-    // Зеркально отражаем x-координату, чтобы 0 и 1 совпадали
-    //uv.x = abs(2.0 * (uv.x - floor(uv.x + 0.5))); // [0 → 1 → 0]
-
     // Time varying pixel color
-    vec3 col = 0.5 + 0.5 * cos(iTime + uv.xyx + vec3(0,2,4));
+    vec4 col = vec4(0.5 + 0.5 * cos(iTime + uv.xyx + vec3(0, 2, 4)), 1.);
     ${code}
 
     // Output to screen
-    fragColor = vec4(col, 1.0);
+    fragColor = col;
 }`
         }
 
@@ -856,176 +882,140 @@ void fHeightDiscard(inout vec4 fragColor, inout vec2 uv){
         this.addItem(item);
     }
 
-    matOneColor(color = 0xff0000){
-        // Material
-        const material = new THREE.ShaderMaterial({
+    // Hatching
+    // Lines angle
+    // Lines frequency
+    addHatchingLines(_options = {}){
+        let options = {
+            width: .5,
+            angle: - Math.PI / 6,
+            freq: 30,
+            rotate: .2,
+            ... _options
+        };
+
+        let item = {
+            type: this.MGLCT_AFTER,
             uniforms: {
-                color: { value: new THREE.Color(color) },
-                height: { value: 0 }
+                mglcHlWidth: { value: options.width },
+                mglcHlAngle: { value: options.angle },
+                mglcHlFreq: { value: options.freq },
+                mglcHlRotate: { value: options.rotate }
             },
-            vertexShader: `
-                varying vec3 vPosition;
-                void main() {
-                    vPosition = position;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            `,
+            main: 'mglcHlMain',
             fragmentShader: `
-                precision mediump float;
-                varying vec3 vPosition;
-                uniform vec3 color;
-                uniform float height;
+uniform float mglcHlWidth;
+uniform float mglcHlAngle;
+uniform float mglcHlFreq;
+uniform float mglcHlRotate;
 
-                void main() {
-                    float stepHeight = 0.1; // Высота шага
-                    float maxHeight = vPosition.y + 1.0; // Нормируем по высоте
-                    float alpha = smoothstep(0.0, stepHeight, height * 2. - maxHeight);
+void mglcHlMain(inout vec4 fragColor, inout vec2 uv){
+    // Increase coordinates to create the effect of slanted lines
+    float angle = mglcHlAngle + iTime * mglcHlRotate; // Slanted angle
+    float freq = mglcHlFreq; // Frequency of lines
 
-                    vec3 col = mix(vec3(1.), color, alpha);
-                    gl_FragColor = vec4(col, alpha); // Цвет куба
+    // Calculate the value for slanted lines
+    float stripes = smoothstep(mglcHlWidth + .2, mglcHlWidth - .15,
+        abs(sin(uv.x * cos(angle) * freq + uv.y * sin(angle) * freq)));
+        //sin((uv.x + uv.y * angle) * frequency);
 
-                    if(gl_FragColor.a <= 0.0)
-                        discard;
 
-                }
-            `,
-            transparent: false,
-            side: THREE.DoubleSide
-        });
+    if(stripes <= 0.0)
+        fragColor.a = stripes;
+    //    discard;
+}`
+        }
 
-        return material;
+        this.addItem(item);
     }
 
-    buildTexture(){
+    addBorder(_options = {}){
+        let options = {
+            size: [1, 1], // Box size
+            borderSize: .1, // Border size
+            borderFree: 0, // Free size
+            borderSmooth: .05, // Border smooth
+            borderColor: 0xffffff, // Border color
+            ... _options
+        };
+
+        const rId = this.getRandomId();
+
+        let item = {
+            type: this.MGLCT_AFTER,
+            uniforms: {
+                [`${rId}size`]: { value: options.size },
+                [`${rId}borderSize`]: { value: options.borderSize },
+                [`${rId}borderSmooth`]: { value: options.borderSmooth },
+                [`${rId}borderFree`]: { value: options.borderFree },
+                [`${rId}borderColor`]: { value: new THREE.Color(options.borderColor) }
+            },
+            main: `${rId}main`,
+            fragmentShader: `
+uniform vec2 ${rId}size;
+uniform float ${rId}borderSize;
+uniform float ${rId}borderSmooth;
+uniform float ${rId}borderFree;
+uniform vec3 ${rId}borderColor;
+
+void ${rId}main(inout vec4 fragColor, inout vec2 uv){
+    vec2 point = uv * ${rId}size;
+    vec2 size = ${rId}size;
+    float borderSize = ${rId}borderSize;
+    float borderSmooth = ${rId}borderSmooth;
+    float borderFree = ${rId}borderFree;
+    vec4 borderColor = vec4(${rId}borderColor, 1.);
+
+    float distanceToBorder = min(min(point.x, point.y), min(size.x - point.x, size.y - point.y)) - borderFree;
+
+    float alpha = max(
+        smoothstep(.0, -min(0.1, borderSmooth), distanceToBorder),
+        smoothstep(borderSize, borderSize + borderSmooth, distanceToBorder)
+    );
+
+    fragColor = mix(borderColor, fragColor, alpha);
+
+    // Calculate smoothing
+    //float alpha = smoothstep(borderSize, borderSize + borderSmooth, distanceToBorder);
+    //fragColor = mix(borderColor, fragColor, alpha);
+}`
+        }
+
+        this.addItem(item);
+    }
+
+    buildTexture(_options = {}){
+        let options = {
+            ... _options
+        };
+
+
         let build = {
             uniforms: {
                 iTime: { value: 0 },
             },
             vertexShader: `
-                precision mediump float;
-                varying vec3 vPosition;
-                varying vec2 vUv;
+precision mediump float;
+varying vec3 vPosition;
+varying vec2 vUv;
 
-                // input
-                uniform float iTime;
+// input
+uniform float iTime;
 
-float explosionSpeed = 0.3; // Скорость разлёта
-float explosionStrength = 1.; // Сила разлёта
-
-// Функция для генерации псевдослучайного числа
-float rand(vec2 co) {
-    return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
+void main(){
+    vUv = uv;
+    vPosition = position;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }
-
-float rand(float seed) {
-    return fract(sin(seed * 12.9898) * 43758.5453);
-}
-
-
-                void main(){
-                    vUv = uv;
-                    vPosition = position;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-
-
-// Random
-if(false){
-    // Получаем базовую позицию вершины
-    vec3 newPosition = position;
-
-    // Генерируем уникальный ID для каждого треугольника
-    float triangleId = float(gl_VertexID / 3); // 3 вершины = 1 треугольник
-
-    // Псевдослучайное направление разлёта
-    vec3 randomDir = vec3(
-        rand(vec2(triangleId, 0.0)) - 0.5,
-        rand(vec2(triangleId, 1.0)) - 0.5,
-        rand(vec2(triangleId, 2.0)) - 0.5
-    );
-    //randomDir = normalize(randomDir);
-
-    // Двигаем треугольник наружу
-    float explosionFactor = explosionStrength * iTime * explosionSpeed;
-    newPosition += randomDir * explosionFactor;
-
-    // Добавляем вращение (опционально)
-    float angle = iTime * 2.0;
-    //newPosition.xz = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * newPosition.xz;
-
-    // Стандартная трансформация Three.js
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
-}
-
-// No deformation
-if(false){
-
-// Получаем базовую позицию вершины
-    vec3 basePosition = position;
-
-    // Вычисляем ID треугольника (3 вершины = 1 треугольник)
-    int triangleId = gl_VertexID / 3;
-
-    // Генерируем случайное направление для треугольника (одинаковое для всех его вершин)
-    vec3 randomDir = vec3(
-        rand(float(triangleId)) - 0.5,
-        rand(float(triangleId + 1)) - 0.5,
-        rand(float(triangleId + 2)) - 0.5
-    );
-    randomDir = normalize(randomDir);
-
-    // Вычисляем силу разлёта
-    float explosionFactor = explosionStrength * iTime * explosionSpeed;
-
-    // Сдвигаем ВСЕ вершины треугольника в одном направлении
-    vec3 newPosition = basePosition + randomDir * explosionFactor;
-
-    // Опционально: добавляем вращение вокруг центра
-    float angle = iTime * 2.0;
-    mat2 rot = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
-    newPosition.xz = rot * (newPosition.xz);
-
-    // Стандартная трансформация Three.js
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
-}
-
-// Un center
-if(false){
-    const vec3 center = vec3(0.0);
-
-    // Получаем базовую позицию вершины
-    vec3 basePosition = position;
-
-    // Вычисляем ID треугольника (3 вершины = 1 треугольник)
-    int triangleId = gl_VertexID / 3;
-
-    // Находим направление от центра к треугольнику
-    vec3 triangleCenter = vec3(0.0); // Можно вычислить точнее (см. пояснения ниже)
-    vec3 dirFromCenter = normalize(basePosition - center);
-
-    // Сила разлёта (можно добавить задержку для волнового эффекта)
-    float delay = float(triangleId) * 0.0; // Задержка для каждого треугольника
-    float explosionFactor = explosionStrength * max(0.0, iTime - delay) * explosionSpeed;
-
-    // Двигаем ВСЕ вершины треугольника в одном направлении
-    vec3 newPosition = basePosition + dirFromCenter * explosionFactor;
-
-    // Стандартная трансформация Three.js
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
-}
-
-                    // float offset = sin(iTime + position.x * 10.0) * 0.5;
-                    // vec3 newPosition = position + normalize(position) * offset;
-                    // gl_Position = vec4(newPosition, 1.0);
-                }
             `,
             fragmentShader: `
-                precision mediump float;
-                varying vec3 vPosition;
-                varying vec2 vUv;
-                //uniform vec4 color;
+precision mediump float;
+varying vec3 vPosition;
+varying vec2 vUv;
+//uniform vec4 color;
 
-                // input
-                uniform float iTime;
+// input
+uniform float iTime;
             `,
             transparent: true,
             side: THREE.DoubleSide
@@ -1053,8 +1043,12 @@ if(false){
 
         for (let i = this.items.length - 1; i >= 0; i--){
             if(this.items[i].type === this.MGLCT_MAIN){
-                main = this.items[i];
-                calsList.push(main.main);
+                const item = main = this.items[i];
+
+                 for(const key in item.uniforms)
+                    build.uniforms[key] = item.uniforms[key];
+
+                calsList.push(item.main);
                 break;
             }
         }
@@ -1157,7 +1151,6 @@ varying vec2 vUv;
 varying vec3 vNormal;
 varying vec3 vPosition;
 varying float vHeight;
-
 
 vec3 GerstnerWave(vec4 wave, vec3 p, inout vec3 tangent, inout vec3 binormal, float time) {
   float steepness = wave.z;

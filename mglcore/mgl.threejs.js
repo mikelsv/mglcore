@@ -10,8 +10,13 @@ import {TextGeometry} from 'three/addons/geometries/TextGeometry.js'
 
 export class mglLoadingScreen{
     loadingText = "Loading:";
+    coverPath = './assets/images/cover.png';
 
-    constructor(){
+    constructor(_options = {}){
+        if(_options.coverPath)
+            this.coverPath = _options.coverPath;
+
+
         this.injectHtml();
     }
 
@@ -67,7 +72,7 @@ export class mglLoadingScreen{
             #mglLoadingImage {
                 width: 100%;
                 height: 50%;
-                background-image: url('./images/cover.png');
+                background-image: url('${this.coverPath}');
                 background-size: contain;
                 background-position: center;
                 background-repeat: no-repeat;
@@ -141,6 +146,51 @@ export class mglFilesLoader{
         return 0;
     }
 
+    // File
+    getFile(name){
+        const item = this.files.find(file => file.name === name);
+
+        if(item){
+            item.used ++;
+            return item.data;
+        }
+
+        return undefined;
+    }
+
+    getUnusedFiles(){
+        let list = [];
+
+        for(const file of this.files){
+            if(file.used == 0)
+                list.push(file);
+        }
+
+        return list;
+    }
+
+    // Debug info
+    showDebugInfo(){
+        let list = "Files:\r\n";
+        let size = 0;
+
+        for(const file of this.files){
+            list += `${file.used ? '+++' : '---'} ${file.name} - ${file.size}.\r\n`;
+            size += (file.size);
+        }
+
+        list += 'Full size: ' + this.formatFileSize(size);
+
+        return list;
+    }
+
+    formatFileSize(bytes){
+        return bytes.toLocaleString('en-EN', {
+            style: 'decimal',
+            maximumFractionDigits: 0
+        }) + ' bytes';
+    }
+
     // Load file
     loadFile(name, url){
         let file = {
@@ -204,6 +254,7 @@ export class mglFilesLoader{
         }
 
         const loaderClass = this;
+        file.size = 0;
 
         if(this.screen){
             let perc = this.files.length / (this.files.length + this.load.length) * 100;
@@ -216,6 +267,7 @@ export class mglFilesLoader{
         // Load
         loader.load(file.url, function(object){
             file.data = object;
+            file.used = 0;
             loaderClass.files.push(file);
 
             if(loaderClass.state == mglFilesLoaderState.LOADING)
@@ -223,7 +275,17 @@ export class mglFilesLoader{
             else if(loaderClass.state == mglFilesLoaderState.ASYNK)
                 loaderClass.loadFileNext();
 
-        }, undefined, function (error) {
+            // Debug info
+            if(!file.size && mglBuild.debug){
+                fetch(file.url, { method: 'HEAD' }).then(response => {
+                        file.size = Number(response.headers.get('Content-Length'));
+                });
+            }
+        }, function(progress){
+            if(progress && progress.loaded)
+                file.size = Number(progress.loaded);
+
+        }, function (error){
             loaderClass.state = mglFilesLoaderState.READY;
             loaderClass.error = `${file.name} (${file.url})`;
 
@@ -234,15 +296,6 @@ export class mglFilesLoader{
 
             loaderClass.state = mglFilesLoaderState.FAIL;
         });
-    }
-
-    // Get file data
-    getFile(name){
-        const item = this.files.find(file => file.name === name);
-
-        if(item)
-            return item.data;
-        return undefined;
     }
 };
 
@@ -280,6 +333,8 @@ export class mglAudioLoader{
                     name: item.name,
                     sound: new THREE.Audio(listener)
                 };
+
+                item.used ++;
 
                 audio.sound.setBuffer(item.data);
                 this.audio.push(audio);

@@ -46,7 +46,12 @@ var mglPackage = {
             let item = scripts[i];
             let src = !item.local ? `${this.mglLibPath}${item.src}` : item.src;
             let type = !item.type ? '' : " type=" + item.type;
-            html += `<script src='${src}'${type}></script>\r\n`;
+
+            // Insert
+            if(item.src)
+                html += `<script src='${src}'${type}></script>\r\n`;
+            if(item.code)
+                html += item.code;
         }
 
         return html;

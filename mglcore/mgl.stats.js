@@ -183,7 +183,7 @@ class mglStatsInfo extends mglStatsWindow{
             `Lines ${this._formatNumber(lines)}`,
             `Points ${this._formatNumber(points)}`,
             `Geoms ${this._formatNumber(geoms)}`,
-            `Texts ${this._formatNumber(texts)}`,
+            `Textures ${this._formatNumber(texts)}`,
             `Shaders ${this._formatNumber(shaders)}`
         ];
 
