@@ -31,3 +31,67 @@ document.addEventListener("DOMContentLoaded", function(){
 
     document.head.appendChild(prettify);
 });
+
+class mglDocsPage{
+    publicPage(page){
+        if(page.title)
+            document.title = page.title;
+
+        let html;
+
+        html = `<h1>${page.title}</h1>`;
+        html += this.makePage(page);
+
+        const div = document.createElement("div");
+        div.innerHTML = html;
+        document.body.appendChild(div);
+    }
+
+    makePage(page){
+        let result = '';
+
+        for(const item of page.data){
+            if(item.h1)
+                result += `<h1>${item.h1}</h1>`;
+
+            if(item.h2)
+                result += `<h2>${item.h2}</h2>`;
+
+            if(item.h3)
+                result += `<h3>${item.h3}</h3>`;
+
+            if(item.desc){
+                result += this.formatDesc(item.desc);
+            }
+
+            if(item.code){
+                result += this.formatCode(item.desc);
+            }
+        }
+
+        return result;
+    }
+
+    formatDesc(text){
+        // Заменяем два переноса строк на <p>
+        let formattedText = text.replace(/(\r?\n){2,}/g, '</p><p>');
+
+        // Заменяем один перенос строки на <br>
+        formattedText = formattedText.replace(/(\r?\n)/g, '<br>');
+
+        // Оборачиваем текст в <p> для первого абзаца, если он не пустой
+        if(formattedText){
+            formattedText = '<p class="desc">' + formattedText + '</p>';
+        }
+
+        return formattedText;
+    }
+
+    formatCode(text){
+        let code = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        return `<code>${code}</code>`;
+    }
+
+
+};

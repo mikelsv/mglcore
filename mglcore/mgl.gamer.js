@@ -18,6 +18,11 @@
 // gameData for get / set values
 
 let gamer = {
+    projectName: 'undefined',
+    projectVers: [ // New to up
+        ["0.0", "00.00.0000 00:00", "Not created yet."],
+    ],
+
     base: {
         // Base values
 

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="docs.js"></script>
+    </head>
+    <body>
+    </body>
+</html>
+
+<script> // Page generator
+let page = new mglDocsPage();
+
+const versions = [
+    { ver: '0.1', data: '08.05.2025 15:35', log: ['Make project and main code'] },
+    { ver: '0.2', data: '12.05.2025 05:16', log: ['Package logic and simple loading'] },
+    { ver: '0.3', data: '14.05.2025 09:09', log: ['Make fixed logic structure and sections'] },
+    { ver: '0.4', data: '15.05.2025 07:16', log: ['Adding mglConsole class'] },
+    { ver: '0.5', data: '17.05.2025 19:27', log: ['Add piratepatch game', 'Add mglPages for title and description'] },
+    { ver: '0.6', data: '18.05.2025 05:25', log: ['Add mglGeometryGenerator and mglModelGenerator for generating models', 'Add new demo'] },
+    { ver: '0.6 abcd', data: '18.05.2025 18:52', log: ['ToDo: sea_mine', 'Blender vs generation'] },
+    { ver: '0.7', data: '21.05.2025 01:30', log: [
+        'mglModelsLoader is deprecated class! Use new mglFilesLoader!',
+        'ToDo: sea_mine animation. Generating a model and animating it from primitives.',
+        'New mglGlslCombineTextures for combining glsl textures.',
+        'ToDo: Parametric Modeling.'
+    ] },
+    { ver: '0.8', data: '26.05.2025 09:06', log: [
+        'The mglApp class has been created. Now it is possible to work with the library through it, which significantly simplifies its use.',
+        'Added documentation section.',
+        'The mglStats class has become even more informative and easier to use.',
+        '(a) Docs color highlighting.',
+        '(a) Replace mglBuild.startGame() to  mglBuild.startApp().',
+        '(b) mglStickControl now have getMoveForHero().',
+        '(b) Touch control test.',
+        '(b) The mglFilesLoader class now tracks file usage and size. Added getUnusedFiles() and showDebugInfo() functions. Use them via console: gamer.mglFiles.showDebugInfo().',
+        '(c) Created mglDocsPage to generate documentation pages.'
+    ] }
+];
+
+let data = {
+    title: 'Versions',
+    data: [
+    ]
+};
+
+for(const ver of versions){
+    let desc = '';
+
+    for(const log of ver.log){
+        if(desc)
+            desc += '\r\n';
+
+        desc += log;
+    }
+
+    let item = {
+        h3: `# ${ver.ver} (${ver.data})`,
+        desc: desc
+    };
+
+    data.data.push(item);
+}
+
+page.publicPage(data);
+</script>
