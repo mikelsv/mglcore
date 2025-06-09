@@ -26,7 +26,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 
 import {mglLights} from 'mglcore/mgl.threejs.js';
 import {scene, camera, renderer, mglInitSections, mglApp} from 'mglcore/mgl.sections.js';
-import {mglGlslTextures, mglGlslMainExsamples, mglGlslCombineTextures, mglGlslOceanWaves} from 'mglcore/mgl.texture.js';
+import {mglGlslTextures, mglGlslMainExamples, mglGlslCombineTextures, mglGlslOceanWaves} from 'mglcore/mgl.texture.js';
 
 import GUI from 'lil-gui';
 
@@ -40,8 +40,10 @@ let materialConfig = {
     wireframe: true,
     fire: false,
     ocean: false,
+    raymarch: "none",
+    raymarchList: [ "none", ... mglGlslTextures.matRaySphereList],
     shader: "none",
-    shaderList: [ "none", ... mglGlslMainExsamples.getNamesList()],
+    shaderList: [ "none", ... mglGlslMainExamples.getNamesList()],
     shaderHeight: false,
     autoRotate: true,
     geometryData: undefined
@@ -183,6 +185,14 @@ function updateGroupGeometry(mesh, geometry, call, data){
         mesh.update = function(deltaTime){
             mesh.children[1].material.update(deltaTime);
         }
+    // Ray Marching
+    } else if(materialConfig.raymarch != "none"){
+        const shader = materialConfig.shader != "none" ? mglGlslMainExamples.getShader(materialConfig.shader) : '';
+
+        mesh.children[1].material = new mglGlslTextures().matRayMarching(camera, materialConfig.raymarch, shader);
+        mesh.update = function(deltaTime){
+            mesh.children[1].material.update(camera, deltaTime);
+        }
     // Ocean
     } else if(materialConfig.ocean){
         let ocean = new mglGlslOceanWaves();
@@ -198,7 +208,7 @@ function updateGroupGeometry(mesh, geometry, call, data){
         options.waterColor = new THREE.Color(materialConfig.color).toArray();
 
         if(materialConfig.shader && materialConfig.shader != "none")
-            options.fragMain = mglGlslMainExsamples.getShader(materialConfig.shader);
+            options.fragMain = mglGlslMainExamples.getShader(materialConfig.shader);
 
         mesh.children[1].material = ocean.buildShader(options);
         mesh.update = function(deltaTime){
@@ -293,6 +303,7 @@ myApp.onStartApp = function(){
     folder.add(materialConfig, 'wireframe').onChange(materialConfig.generateGeometry);
     folder.add(materialConfig, 'fire').onChange(materialConfig.generateGeometry);
     folder.add(materialConfig, 'ocean').onChange(materialConfig.generateGeometry);
+    folder.add(materialConfig, 'raymarch', materialConfig.raymarchList).onChange(materialConfig.generateGeometry);
     folder.add(materialConfig, 'shader', materialConfig.shaderList).onChange(materialConfig.generateGeometry);
     folder.add(materialConfig, 'shaderHeight').onChange(materialConfig.generateGeometry);
 
@@ -302,7 +313,7 @@ myApp.onStartApp = function(){
     }, { once: true });
 }
 
-myApp.onAnimateApp = function(deltaTime){
+myApp.onAnimateApp = function(time, deltaTime){
     if(this.group.update)
         this.group.update(deltaTime);
 

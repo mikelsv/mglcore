@@ -359,7 +359,6 @@ void main(){
     mainImage(fragColor, gl_FragCoord.xy);
     gl_FragColor = fragColor;
 }
-
                 `,
             transparent: false
         });
@@ -367,6 +366,208 @@ void main(){
         return m;
     }
 
+    static matRaySphereList = [ "sphere", "box", "boxRounded", "torus",  "octahedron", "cylinder", "conus", "capsule", "prism",
+        "union", "substract", "intersection", "smooth union", "displace"];
+
+    matRayMarching(camera, type, shader = ''){
+        const index = mglGlslTextures.matRaySphereList.indexOf(type);
+        let typeId = index >= 0 ? index : 0 ;
+
+        let material = new THREE.ShaderMaterial({
+            uniforms: {
+                u_time: { value: 0 },
+                u_cameraPos: { value: new THREE.Vector3() },
+            },
+            vertexShader: `
+varying vec3 vWorldPosition;
+void main() {
+    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+    vWorldPosition = worldPosition.xyz;
+    gl_Position = projectionMatrix * viewMatrix * worldPosition;
+}
+        `,
+            fragmentShader: `
+precision highp float;
+
+#define PI 3.1415926
+
+uniform float u_time;
+uniform vec3 u_cameraPos;
+varying vec3 vWorldPosition;
+
+const int typeId = ${typeId};
+
+float sphereSDF(vec3 p, float r) {
+    return length(p) - r;
+}
+
+float boxSDF(vec3 p, vec3 b) {
+  vec3 q = abs(p) - b;
+  return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
+float roundedBoxSDF(vec3 p, vec3 b, float r) {
+  vec3 q = abs(p) - b;
+  return length(max(q, 0.0)) - r;
+}
+
+float torusSDF(vec3 p, float R, float r) {
+    // R - main radius
+    // r - tube radius
+    vec2 q = vec2(length(p.xz) - R, p.y);
+    return length(q) - r;
+}
+
+float octahedronSDF(vec3 p, float s) {
+  p = abs(p);
+  return (p.x + p.y + p.z - s) * 0.57735027; // 1/sqrt(3)
+}
+
+float cylinderSDF(vec3 p, float h, float r){
+    vec2 d = abs(vec2(length(p.xz), p.y)) - vec2(r, h);
+    return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
+}
+
+float coneSDF(vec3 p, float h, float r) {
+    // Center by height: top at y = +h/2, base at y = -h/2
+    p.y += h * 0.5;
+
+    float k = r / h;
+    float q = length(p.xz);
+
+    // Distance to side surface
+    float side = dot(vec2(q, p.y), normalize(vec2(r, -h)));
+
+    // Height constraints
+    float d1 = max(side, -p.y); // base
+    float d2 = max(d1, p.y - h); // top
+
+    // Return with interior area
+    return d2;
+}
+
+float capsuleSDF(vec3 p, vec3 a, vec3 b, float r) {
+    vec3 pa = p - a, ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h) - r;
+}
+
+float triangularPrismSDF(vec3 p, vec2 h) {
+    vec3 q = abs(p);
+    return max(q.z - h.y, max(q.x * 0.866025 + p.y * 0.5, -p.y) - h.x * 0.5);
+}
+
+// SDF operations
+float opUnion(float a, float b) { return min(a,b); }
+float opSubtract(float a, float b) { return max(a,-b); }
+float opIntersect(float a, float b) { return max(a,b); }
+float opSmoothUnion(float a, float b, float k) { float h = clamp(0.5 + 0.5*(b-a)/k, 0.0, 1.0); return mix(b, a, h) - k*h*(1.0-h); }
+float opDisplace(vec3 p) { return sin(2.0*p.x)*sin(2.0*p.y)*sin(2.0*p.z)*1.5; }
+
+// Combinations
+float sceneSDF(vec3 p) {
+    if(typeId == 9){
+        float sphere = sphereSDF(p - vec3(5.5, 1.5, 0.0), 7.5);
+        float box = boxSDF(p + vec3(0.5, 0.0, 0.0), vec3(7.5));
+        return opUnion(sphere, box);
+    } else if(typeId == 10){
+        float sphere = sphereSDF(p - vec3(5.5, 1.5, 0.0), 7.5);
+        float box = boxSDF(p + vec3(0.5, 0.0, 0.0), vec3(7.5));
+        return opSubtract(box, sphere);
+    } else if(typeId == 11){
+        float sphere = sphereSDF(p - vec3(5.5, 1.5, 0.0), 7.5);
+        float box = boxSDF(p + vec3(0.5, 0.0, 0.0), vec3(7.5));
+        return opIntersect(box, sphere);
+    }else if(typeId == 12){
+        float s1 = sphereSDF(p - vec3(7., 0.0, 0.0), 7.5);
+        float s2 = sphereSDF(p + vec3(7., 0.0, 0.0), 7.5);
+        return opSmoothUnion(s1, s2, 3.3);
+    }else if(typeId == 13){
+        float cyl = cylinderSDF(p, 7.5, 7.5);
+        float displace = opDisplace(p * 3.0);
+        return cyl + displace;
+    }
+}
+
+void main(){
+    vec3 ro = u_cameraPos;
+    vec3 rd = normalize(vWorldPosition - ro);
+
+    vec3 p;
+    float t = 0.0;
+    bool hit = false;
+
+    for(int i = 0; i < 64; i++){
+        p = ro + rd * t;
+            float dist;
+
+        if(typeId == 0)
+            dist = sphereSDF(p, 7.5);
+        else if(typeId == 1)
+            dist = boxSDF(p, vec3(7.5));
+        else if(typeId == 2)
+            dist = roundedBoxSDF(p, vec3(4), 5.);
+        else if(typeId == 3)
+            dist = torusSDF(p, 12.5, 1.5);
+        else if(typeId == 4)
+            dist = octahedronSDF(p, 12.5);
+        else if(typeId == 5)
+            dist = cylinderSDF(p, 7.5, 7.5);
+        else if(typeId == 6)
+            dist = coneSDF(p, 7.5, 7.5);
+        else if(typeId == 7)
+            dist = capsuleSDF(p, vec3(-5.0, 0.0, 0.0), vec3(5.0, 0.0, 0.0), 7.5);
+        else if(typeId == 8)
+            dist = triangularPrismSDF(p, vec2(7.5, 5.5));
+        else //if(typeId == 9)
+            dist = sceneSDF(p);
+
+        if (dist < 0.001){
+            hit = true;
+            break;
+        }
+
+        t += dist;
+
+        if(t > 50.0)
+            break;
+    }
+
+    if(hit){
+        vec3 sphereVec = normalize(p - vec3(0.0)); // направление от центра к точке
+        float u = 0.5 + atan(sphereVec.z, sphereVec.x) / (2.0 * 3.141592);
+        float v = 0.5 - asin(sphereVec.y) / 3.141592;
+        vec2 uv = vec2(u, v);
+
+        vec4 col = vec4(1);
+
+        // Chessbord
+        vec2 tile = floor(uv * 10.0);
+        float pattern = mod(tile.x + tile.y, 2.0);
+        col.xyz = vec3(1.0) * pattern;
+
+        float iTime = u_time;
+        ${shader}
+
+        gl_FragColor = col;
+    } else {
+        //gl_FragColor = vec4(vec3(.2), 1.0);
+        discard;
+    }
+}
+            `,
+            side: THREE.BackSide,
+            transparent: false
+        });
+
+        material.update = function(camera, deltaTime){
+            //console.log(camera);
+            material.uniforms.u_cameraPos.value.copy(camera.position);
+            material.uniforms.u_time.value += deltaTime;
+        }
+
+        return material;
+    }
 
     // MultilineTextures - make y line multiple textures.
     // size: {x, y} - place size
@@ -593,8 +794,8 @@ void main() {
     transparent: true,
   });
 
-        material.update = function(){
-            material.uniforms.fDt.value += 0.005;
+        material.update = function(deltaTime){
+            material.uniforms.fDt.value += deltaTime;
         }
 
         return material;
@@ -716,15 +917,15 @@ void main(){
 
 };
 
-export let mglGlslMainExsamples = {
+export let mglGlslMainExamples = {
     shaders: [
+        { name: "chessboard", title: "Chessboard", code: "vec2 tile = floor(uv * 10.0); float pattern = mod(tile.x + tile.y, 2.0); col.xyz = vec3(1.0) * pattern;" },
         { name: "shadertoy", title: "Shadertoy new", code: "col.xyz = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));"},
         { name: "rainbow_gradient", title: "Rainbow gradient", code: "col.xyz = 0.5 + 0.5 * cos(iTime + uv.xyx * 5.0 + vec3(0, 2, 4));"},
         { name: "rainbow_waves", title: "Rainbow Waves", code: "col.xyz = 0.5 + 0.5 * cos(iTime + uv.xyx * 10.0 + vec3(0, 1, 2));"},
         { name: "pseudo_random_noise", title: "Pseudo-random noise", code: "col.xyz = 0.5 + 0.5 * cos(iTime + uv.xyx * 20.0 + vec3(0, 3, 6) * fract(sin(uv.x * 10.0) * 10000.0));"},
         { name: "blink_color", title: "Blink Color", code: "col = vec4(1., 1., 1., 0.5 + 0.5 * sin(iTime));"},
         { name: "concentric_circles", title: "Concentric circles", code: "float d = length(uv - 0.5); col.xyz = 0.5 + 0.5 * cos(-iTime + d * 10.0 + vec3(0, 2, 4));"},
-        { name: "chessboard", title: "Chessboard", code: "vec2 tile = floor(uv * 10.0); float pattern = mod(tile.x + tile.y, 2.0); col.xyz = vec3(1.0) * pattern;" },
         { name: "pulsating_circle", title: "Pulsating circle", code: "float d = length(uv - 0.5); col.xyz = vec3(smoothstep(0.3, 0.3 + 0.1 * sin(iTime), d));"},
         { name: "colored_stripes", title: "Chessnoise", code: "col.xyz = vec3(sin(uv.x * 20.0 + iTime), cos(uv.y * 15.0 + iTime * 0.7), sin((uv.x + uv.y) * 10.0 + iTime * 1.3)) * 0.5 + 0.5;"},
         { name: "chessnoise", title: "Chessnoise", code: "float noise = sin(uv.x * 50.0 + iTime) * sin(uv.y * 30.0 + iTime); col.xyz = vec3(noise * 0.5 + 0.5, noise * 0.3, 0.0);"},
@@ -756,7 +957,7 @@ col.xyz = vec3(
     getShader(name){
         let find = this.shaders.find(item => item.name == name);
         if(!find){
-            console.error(`mglGlslMainExsamples.getShader(): shader name ${name} not found.`);
+            console.error(`mglGlslMainExamples.getShader(): shader name ${name} not found.`);
             return this.shaders[0].code;
         }
 
@@ -827,7 +1028,7 @@ void mainImage(inout vec4 fragColor, inout vec2 uv){
     }
 
     addMainTemplate(name = "shadertoy"){
-        let code = mglGlslMainExsamples.getShader(name);
+        let code = mglGlslMainExamples.getShader(name);
 
         let item = {
             type: this.MGLCT_MAIN,

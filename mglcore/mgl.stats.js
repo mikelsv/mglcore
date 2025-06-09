@@ -80,9 +80,9 @@ class mglStatsWindow{
 
 // Extended stats
 class mglStatsGraph extends mglStatsWindow{
-    constructor(name, fontColor, bgColor, updateTime, r){
+    constructor(name, fontColor, bgColor, updateTime, showMode){
         super(name, fontColor, bgColor, updateTime);
-        this.getAverage = r;
+        this.showMode = showMode;
         this.prevTime = null;
         this.sum = 0;
         this.count = 0;
@@ -103,7 +103,7 @@ class mglStatsGraph extends mglStatsWindow{
         this.drawGraph();
     }
 
-    update(nowTime, value, n, i) {
+    update(nowTime, value, valueMax, i){
         if (this.prevTime === null || this.isCollapsed){
             this.prevTime = nowTime;
             return
@@ -113,7 +113,10 @@ class mglStatsGraph extends mglStatsWindow{
         this.count ++;
 
         if(!(nowTime < this.prevTime + this.updateTime)){
-            value = this.getAverage ? this.sum / this.count : this.sum;
+            value = (this.showMode == 1 ? this.sum / this.count :
+                    this.showMode == 2 ? value :
+                    this.sum);
+
             this.prevTime += this.updateTime * Math.floor((nowTime - this.prevTime) / this.updateTime);
             this.count = 0;
             this.sum = 0;
@@ -126,7 +129,7 @@ class mglStatsGraph extends mglStatsWindow{
             this.context.fillRect(this.GRAPH_X + this.GRAPH_WIDTH - this.PR, this.GRAPH_Y, this.PR, this.GRAPH_HEIGHT);
             this.context.fillStyle = this.bgColor;
             this.context.globalAlpha = .9;
-            this.context.fillRect(this.GRAPH_X + this.GRAPH_WIDTH - this.PR, this.GRAPH_Y, this.PR, Math.round((1 - value / n) * this.GRAPH_HEIGHT));
+            this.context.fillRect(this.GRAPH_X + this.GRAPH_WIDTH - this.PR, this.GRAPH_Y, this.PR, Math.round((1 - value / valueMax) * this.GRAPH_HEIGHT));
         }
     }
 }
@@ -243,6 +246,7 @@ export class mglStats{
         this.queries = [];
         this.beginTime = null;
         this.endTime = null;
+        this.updateTime = 0;
 
         this.clickPanelCallback = n => {
             this.showPanel(++this.mode % this.dom.children.length);
@@ -251,11 +255,11 @@ export class mglStats{
 
         // Panels
         this.renderer = renderer;
-        this.fpsPanel = this.addPanel(new mglStatsGraph("FPS", "#0ff", "#002", 1e3, !1));
-        this.cpuPanel = this.addPanel(new mglStatsGraph("ms CPU", "#0f0", "#020", 100, !0));
+        this.fpsPanel = this.addPanel(new mglStatsGraph("FPS", "#0ff", "#002", 1e3, 0));
+        this.cpuPanel = this.addPanel(new mglStatsGraph("ms CPU", "#0f0", "#020", 100, 1));
 
         if(self.performance && self.performance.memory)
-		    this.memPanel = this.addPanel(new mglStatsGraph('MB', '#f08', '#201', 1000));
+		    this.memPanel = this.addPanel(new mglStatsGraph('MB', '#f08', '#201', 1000, 2));
 
         if(renderer){
             this.gl = renderer.getContext('webgl2');
@@ -371,12 +375,15 @@ export class mglStats{
 
     // Update
     update(){
-        this.cpuPanel.update(this.endTime,  this.endTime - this.beginTime, 33, 3);
+        const time = performance.now();
+        const deltaTime = this.endTime - this.beginTime;
+
+        this.cpuPanel.update(this.endTime, deltaTime, 33, 3);
         this.fpsPanel.update(this.endTime, 1, 144, 0);
 
         if(this.memPanel){
             var memory = performance.memory;
-            this.memPanel.update(this.endTime, memory.usedJSHeapSize / 1048576, memory.jsHeapSizeLimit / 1048576, 0);
+            this.memPanel.update(this.endTime, memory.usedJSHeapSize / 1048576, memory.jsHeapSizeLimit / 1048576, 3);
         }
 
         if(this.gpuPanel)
@@ -393,5 +400,6 @@ export class mglStats{
                 this.renderer.info.programs.length
             ]);
 
+        this.updateTime = time;
     }
 }

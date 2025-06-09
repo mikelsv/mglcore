@@ -21,10 +21,11 @@ export class mglInitSections{
         let size = !options.canvas ? { width: window.innerWidth, height: window.innerHeight } : { width: options.canvas.offsetWidth, height: options.canvas.offsetHeight };
 
         // Make camera
-        camera = new THREE.PerspectiveCamera(35, size.width / size.height, 0.1, 1000);
+        camera = new THREE.PerspectiveCamera(options.camera.fov, size.width / size.height, 0.1, 1000);
+        //console.log(options, size, window.innerWidth, window.innerHeight);
 
         // Make render
-        renderer = new THREE.WebGLRenderer(options);
+        renderer = new THREE.WebGLRenderer(options.render);
         renderer.setSize(size.width, size.height);
         renderer.alpha = options.alpha ? true : false;
         renderer.setClearColor(0x000000, 1);
@@ -68,6 +69,15 @@ export class mglInitSections{
         //     '-webkit-user-drag': 'none',
         //     '-webkit-user-select': 'none',
         //  });
+
+        // Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            console.log("Window resized!", window.innerWidth, window.innerHeight);
+        });
+
     }
 
     static async initSection(mglModels){
@@ -98,32 +108,23 @@ export class mglInitSections{
         mglBuild.updateLang();
         mglModels.getScreen().setLoadingText(gamer.lang("LOADING_MESSAGE"));
 
-        // Resize
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            console.log("Window resized!", window.innerWidth, window.innerHeight);
-        });
-
         // Lock the context menu
         if(!mglBuild.debug && !url.searchParams.get("mglmenu")){
             const canvas = renderer.domElement;
-            // canvas.addEventListener('contextmenu', (e) => {
-            //     console.log("!contextmenu");
-            //     e.preventDefault();
-            //     return false;
-            // }, { passive: false });
+            canvas.addEventListener('contextmenu', (e) => {
+                console.log("!contextmenu");
+                e.preventDefault();
+                return false;
+            }, { passive: false });
         }
     }
 };
-
 
 export class mglApp{
     lastTime = 0;
 
     // Load section call
-    onLoadApp(){
+    onLoadApp(mglFiles){
         // this.mglFiles.loadFile('name', 'url');
     }
 
@@ -158,11 +159,15 @@ export class mglApp{
                 antialias: true,
                 shadow: false,
                 ... _options.render
-            }
+            },
+            camera: {
+                 fov: 45,
+                 ... _options.camera
+            },
         };
 
         // [Render section]
-        mglInitSections.renderSection(options.render);
+        mglInitSections.renderSection(options);
         //mglInitSections.renderSection({ alpha: true, shadow: true });
 
         // [Load section]
@@ -189,8 +194,14 @@ export class mglApp{
 
             this.mglFiles.asyncLoad()
             .then(() => {
+                // Audio
+                this.mglAudio = new mglAudioLoader();
+                this.mglAudio.load(camera, this.mglFiles);
+
+                // Hide screen
                 this.mglFiles.getScreen().hideScreen();
 
+                // Start app
                this.startApp();
             });
         })
@@ -223,7 +234,7 @@ export class mglApp{
         this.lastTime = time;
 
         // User call
-        this.onAnimateApp(this.deltaTime);
+        this.onAnimateApp(time, this.deltaTime);
 
         //console.log(renderer);
 
@@ -235,4 +246,91 @@ export class mglApp{
             this.stats.endAnimate();
     }
 
+};
+
+// level builder class
+
+export class mglLevelBuilder{
+    // Textures
+    textures = [];
+
+    getTexture(id){
+        let item = this.textures.find(item => item.id == id);
+        if(item)
+            return item.texture;
+
+        return undefined;
+    }
+
+    addTexture(id, texture){
+        let item = {
+            id: id,
+            texture: texture
+        };
+
+        this.textures.push(item);
+    }
+
+    removeTexture(id){
+        let index = this.textures.findIndex(item => item.id === id);
+
+        if(index !== -1){
+            this.textures.splice(index, 1);
+        }
+    }
+
+    clearTextures(){
+        this.textures.length = 0;
+    }
+
+    // Font
+    setFont(font){
+        this.mglFont = font;
+    }
+
+    // Draw
+    drawText2d(_optiopns = {}){
+        let options = {
+            text: "test",
+            size: 1,
+            color: 0xffffff,
+            position: new THREE.Vector3(0, 0, 0),
+            ... _optiopns
+        };
+
+        const material = new THREE.MeshBasicMaterial({
+            color: options.color,
+            side: THREE.DoubleSide
+        });
+
+        const shapes = this.mglFont.generateShapes(options.text, options.size);
+        const geometry = new THREE.ShapeGeometry(shapes);
+
+        geometry.computeBoundingBox();
+
+        const xMid = - 0.5 * (geometry.boundingBox.max.x - geometry.boundingBox.min.x);
+        geometry.translate(xMid, 0, 0);
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.copy(options.position);
+
+        return mesh;
+    }
+
+    // Buttons
+
+
+    // Callbacks
+    callback(){} // general
+    callbutton(){} // button
+
+    // Update
+    update(time, deltaTime){} // Animate
+
+    // Test
+    testDuplicateValues(enumObj) {
+        const values = Object.values(enumObj);
+        const uniqueValues = new Set(values);
+        return values.length !== uniqueValues.size;
+    }
 };

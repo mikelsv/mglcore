@@ -125,8 +125,8 @@ export class mglStickControl{
         }
 
         // Disable menu and other
-        event.preventDefault();
-        console.log("!start");
+        //event.preventDefault();
+        //console.log("!start");
     }
 
     // Touch move
@@ -146,7 +146,7 @@ export class mglStickControl{
             this.moveX = dx / this.radius;
             this.moveY = dy / this.radius;
 
-            event.preventDefault();
+            //event.preventDefault();
         }
     }
 
@@ -214,11 +214,11 @@ export class mglStickControl2d extends mglStickControl{
 
         // Create a joystick element
         this.joystick = document.createElement('div');
-        this.joystick.id = 'mgjGameStickJoystick';
+        this.joystick.id = 'mglGameStickJoystick';
 
         // Create a joystick knob element
         this.joystickKnob = document.createElement('div');
-        this.joystickKnob.id = 'mgjGameStickJoystickkKnob';
+        this.joystickKnob.id = 'mglGameStickJoystickkKnob';
 
         // Add the knob to the joystick
         this.joystick.appendChild(this.joystickKnob);

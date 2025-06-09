@@ -56,6 +56,17 @@ class KiVec2 {
     }
 }
 
+class mglRandom{
+    static randomInt(value){
+        return Math.floor(Math.random() * value);
+    }
+
+    static randomInt2(min, max){
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+};
+
 // Based on https://easings.net/
 // Value from 0 to 1
 class mglEasting{

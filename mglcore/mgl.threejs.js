@@ -5,7 +5,7 @@ import {GLTFLoader} from  'three/addons/loaders/GLTFLoader.js';
 import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
 import {SVGLoader} from 'three/addons/loaders/SVGLoader.js';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
-
+import {TTFLoader} from 'three/addons/loaders/TTFLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js'
 
 export class mglLoadingScreen{
@@ -171,17 +171,59 @@ export class mglFilesLoader{
 
     // Debug info
     showDebugInfo(){
-        let list = "Files:\r\n";
+        let list = "Files:\r\n" + "-".repeat(10) + '\r\n';
+        let list2 = 'State:\r\n' + "-".repeat(10) + '\r\n';
         let size = 0;
+        const extSize = {};
 
         for(const file of this.files){
-            list += `${file.used ? '+++' : '---'} ${file.name} - ${file.size}.\r\n`;
+            list += `${file.used ? '+++' : '---'} ${file.name} - ${this.formatFileSize(file.size)}.\r\n`;
             size += (file.size);
+
+            const ext = this.getFileExtension(file.url);
+
+            if (!extSize[ext])
+                extSize[ext] = { ext: ext, count: 0, size: 0 };
+
+            extSize[ext].count ++;
+            extSize[ext].size += file.size;
         }
 
-        list += 'Full size: ' + this.formatFileSize(size);
+        //list += 'Size by extension:\r\n';
+        for (const item of Object.values(extSize)) {
+            list2 += `${item.ext} x ${item.count}: `.padEnd(10) + ` ${this.formatFileSize(item.size)}\r\n`;
+        }
 
-        return list;
+        list2 += '\r\nFull size: ' + this.formatFileSize(size);
+
+        return this.showCols([list, list2]);
+    }
+
+    showCols(texts){
+        // Определяем максимальную ширину столбца
+        const columnWidths = texts.map(text => {
+            return text.split('\n').reduce((maxWidth, line) => {
+                return Math.max(maxWidth, line.length);
+            }, 0);
+        });
+
+        // Создаем массив строк для вывода
+        const outputLines = [];
+
+        // Разбиваем каждый текст на строки и добавляем их в соответствующие столбцы
+        const maxLines = Math.max(...texts.map(text => text.split('\n').length));
+
+        for (let i = 0; i < maxLines; i++) {
+            const row = texts.map((text, index) => {
+                const lines = text.split('\n');
+                return lines[i] ? lines[i].padEnd(columnWidths[index]) : ''.padEnd(columnWidths[index]);
+            });
+            outputLines.push(row.join('  '));
+        }
+
+        // Выводим результат
+        //console.log(outputLines.join('\n'));
+        return outputLines.join('\n')
     }
 
     formatFileSize(bytes){
@@ -199,23 +241,21 @@ export class mglFilesLoader{
         };
 
         this.load.push(file);
-
-        this.isReady();
     }
 
     async asyncLoad(){
+        if(this.state != mglFilesLoaderState.READY)
+            console.error("mglFilesLoader.asyncLoad() state not ready!");
+
         if(this.load.length){
             this.state = mglFilesLoaderState.ASYNK;
-            this.#loadFileNext();
+            return new Promise((resolve) => {
+                this.asynkResolve = resolve;
+                this.#loadFileNext();
+            });
         } else{
             return 1;
         }
-
-        //  return new Promise((resolve) => {
-        //     setTimeout(() => {
-        //         resolve("Данные получены");
-        //     }, 2000);
-        // });
     }
 
     getFileExtension(filename){
@@ -242,8 +282,10 @@ export class mglFilesLoader{
             dracoLoader.setDecoderPath( mglPackage.mglLibPath + 'extern/addons/libs/draco/');
             loader.setDRACOLoader( dracoLoader );
 
-        } else if(ext == 'json' || ext == 'ttf')
+        } else if(ext == 'json'){
             loader = new FontLoader();
+        } else if(ext == 'ttf')
+            loader = new TTFLoader();
         else if(ext == 'mp3' || ext == 'wav')
             loader = new THREE.AudioLoader();
         else{
@@ -270,16 +312,20 @@ export class mglFilesLoader{
             file.used = 0;
             loaderClass.files.push(file);
 
-            if(loaderClass.state == mglFilesLoaderState.LOADING)
-                loaderClass.state = mglFilesLoaderState.READY;
-            else if(loaderClass.state == mglFilesLoaderState.ASYNK)
-                loaderClass.loadFileNext();
-
             // Debug info
             if(!file.size && mglBuild.debug){
                 fetch(file.url, { method: 'HEAD' }).then(response => {
                         file.size = Number(response.headers.get('Content-Length'));
                 });
+            }
+
+            if(loaderClass.state == mglFilesLoaderState.LOADING)
+                loaderClass.state = mglFilesLoaderState.READY;
+            else if(loaderClass.state == mglFilesLoaderState.ASYNK){
+                if(loaderClass.load.length > 0)
+                    loaderClass.#loadFileNext();
+                else
+                    loaderClass.asynkResolve();
             }
         }, function(progress){
             if(progress && progress.loaded)
@@ -351,8 +397,12 @@ export class mglAudioLoader{
         if(audio){
             //audio.sound.setVolume(volume);
 
-            if(audio.sound.isPlaying)
+            if(audio.sound.isPlaying){
+                if(tweak && tweak.continue)
+                    return ;
+
                 audio.sound.stop();
+            }
 
             if(!tweak)
                 audio.sound.play();
@@ -1116,6 +1166,25 @@ export class mglTextControls2d{
 export class mglSingleText2d{
     setHelFont(font){
         this.helFont = font;
+    }
+
+    makeShapeText2(text, color, size, font = this.helFont){
+        const geometry = new TextGeometry(text, {
+            font: font,
+            size: size,
+            height: 0.0,
+            bevelEnabled: false,
+            bevelThickness: 0.05,
+            bevelSize: 0.01,
+            bevelSegments: 0,
+        });
+
+        const mesh = new THREE.Mesh(
+        geometry,
+        new THREE.MeshStandardMaterial({ color: Math.random() * 0x999999 + 0x999999 })
+        );
+
+        return mesh;
     }
 
     // font - object: helvetiker_regular.typeface.json
